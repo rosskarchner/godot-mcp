@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/path/to/godot-mcp/src/index.js"],
+      "env": {
+        "GODOT_DEBUG_HOST": "127.0.0.1",
+        "GODOT_DEBUG_PORT": "6006"
+      }
+    }
+  }
+}

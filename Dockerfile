@@ -2,11 +2,10 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm install --production
+# Copy package files and pre-installed dependencies
+# This avoids npm installation issues in Docker build
+COPY package.json package-lock.json ./
+COPY node_modules/ ./node_modules/
 
 # Copy source code
 COPY src/ ./src/

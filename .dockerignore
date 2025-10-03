@@ -1,0 +1,10 @@
+.git
+.gitignore
+*.md
+!README.md
+.env
+*.log
+test-connection.sh
+docker-compose.yml
+mcp-config-example.json
+USAGE.md

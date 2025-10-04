@@ -130,13 +130,13 @@ const tools = [
   },
   {
     name: "set_breakpoint",
-    description: "Set a breakpoint in a source file at a specific line number",
+    description: "Set a breakpoint in a source file at a specific line number. Note: Requires full filesystem path, not res:// format. Get the correct path from stack traces.",
     inputSchema: {
       type: "object",
       properties: {
         source: {
           type: "string",
-          description: "Path to the source file (e.g., 'res://scripts/player.gd')"
+          description: "Full filesystem path to the source file (e.g., '/home/user/project/scripts/player.gd'). Use get_stack_trace to obtain correct paths."
         },
         line: {
           type: "number",

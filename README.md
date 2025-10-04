@@ -153,11 +153,13 @@ First, ensure Godot is running with debugging enabled. Then connect:
 
 ### Setting Breakpoints
 
+**Note**: Breakpoints require the full filesystem path, not the `res://` format. You can obtain the correct path from stack traces.
+
 ```json
 {
   "tool": "set_breakpoint",
   "arguments": {
-    "source": "res://scripts/player.gd",
+    "source": "/absolute/path/to/project/scripts/player.gd",
     "line": 42,
     "condition": "health < 10"
   }

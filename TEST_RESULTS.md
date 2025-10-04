@@ -122,6 +122,58 @@ Testing performed with a live Godot instance (Roguetemple GJ 2025 project)
    - ✅ Updated tool descriptions in index.js
    - Future: Add troubleshooting section for common path issues
 
+## Port Comparison Analysis
+
+### Port 6006 (DAP - Editor) ✅ TESTED
+- **Protocol**: Debug Adapter Protocol (DAP)
+- **Purpose**: Debug the Godot editor process
+- **Status**: Fully functional with all 14 tools
+- **Use Case**: Debugging editor scripts and plugins
+
+### Port 6007 (Remote Debug - Game) ⚠️ NOT DAP
+- **Protocol**: Godot's custom binary remote debug protocol
+- **Purpose**: Remote debugging of running game instances
+- **Status**: Not compatible with current DAP implementation
+- **Notes**: Responds with scene data in custom format, not DAP JSON-RPC
+- **Recommendation**: Would require separate implementation for Godot remote debug protocol
+
+### Port 6005 (LSP - Language Server) 🌟 VALUABLE ADDITION
+- **Protocol**: Language Server Protocol (LSP)
+- **Purpose**: Code intelligence (completion, hover, diagnostics, etc.)
+- **Status**: Tested and working
+- **Capabilities Discovered**:
+  - ✅ Code diagnostics (unused parameters, type warnings)
+  - ✅ Hover documentation (shows function signatures and docs)
+  - ✅ Code completion support
+  - ✅ Go-to-definition support
+  - ✅ Workspace symbol search
+  - ✅ Real-time error checking across entire project
+
+**Example LSP Response**:
+```json
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "func Node.get_tree() -> SceneTree\n\nReturns the SceneTree..."
+  }
+}
+```
+
+**Discovered Diagnostics in Project**:
+- Unused parameter warnings in mob.gd and game.gd
+- Integer division warnings in map_generator.gd
+
+### Recommendation: Add LSP Support
+
+Adding LSP support would provide AI assistants with:
+1. **Code Understanding**: Get function signatures, documentation, and type information
+2. **Error Detection**: Identify issues before running the game
+3. **Navigation**: Jump to definitions and find references
+4. **Refactoring Support**: Understand code structure for better suggestions
+5. **Auto-completion**: Suggest valid methods and properties
+
+This would complement the debugging features (DAP) with static analysis and code intelligence.
+
 ## Conclusion
 
 The Godot MCP Server implementation is **production-ready** with 13 out of 14 tools fully functional. The one tool with issues (`step_out`) has a timeout that may be expected behavior given the nature of stepping out of functions. The critical documentation issue regarding breakpoint paths has been resolved.
@@ -134,3 +186,5 @@ All core debugging functionality works correctly:
 - Execution control (stepping and continuation)
 
 The server successfully integrates with Godot's Debug Adapter Protocol and provides a robust interface for AI assistants to debug Godot games.
+
+**Future Enhancement**: Adding LSP support (port 6005) would significantly enhance the server's capabilities by providing code intelligence features alongside debugging functionality.

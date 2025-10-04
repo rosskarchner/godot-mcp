@@ -7,22 +7,28 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { DAPClient } from './dap-client.js';
+import { LSPClient } from './lsp-client.js';
 
 /**
  * Godot MCP Server
- * Connects to Godot's Debug Adapter Protocol port for debugging and performance monitoring
+ * Connects to Godot's Debug Adapter Protocol (DAP) and Language Server Protocol (LSP) ports
+ * for debugging, code intelligence, and performance monitoring
  */
 
 const DEBUG_PORT = parseInt(process.env.GODOT_DEBUG_PORT || '6006');
 const DEBUG_HOST = process.env.GODOT_DEBUG_HOST || '127.0.0.1';
+const LSP_PORT = parseInt(process.env.GODOT_LSP_PORT || '6005');
+const LSP_HOST = process.env.GODOT_LSP_HOST || '127.0.0.1';
 
-// Global DAP client instance
+// Global client instances
 let dapClient = null;
+let lspClient = null;
+const diagnosticsCache = new Map(); // Cache for diagnostics by URI
 
 /**
  * Ensure DAP client is connected
  */
-async function ensureConnection() {
+async function ensureDAPConnection() {
   if (!dapClient) {
     dapClient = new DAPClient(DEBUG_HOST, DEBUG_PORT);
     await dapClient.connect();
@@ -33,12 +39,36 @@ async function ensureConnection() {
 }
 
 /**
+ * Ensure LSP client is connected
+ */
+async function ensureLSPConnection() {
+  if (!lspClient) {
+    lspClient = new LSPClient(LSP_HOST, LSP_PORT);
+    
+    // Listen for diagnostic notifications
+    lspClient.on('notification', (message) => {
+      if (message.method === 'textDocument/publishDiagnostics') {
+        const uri = message.params.uri;
+        const diagnostics = message.params.diagnostics;
+        diagnosticsCache.set(uri, diagnostics);
+      }
+    });
+    
+    await lspClient.connect();
+  } else if (!lspClient.isConnected()) {
+    await lspClient.connect();
+  }
+  return lspClient;
+}
+
+/**
  * Tool definitions
  */
 const tools = [
+  // DAP Connection Management
   {
     name: "connect_debugger",
-    description: "Connect to the Godot debug port. This must be called before other debugging operations.",
+    description: "Connect to the Godot debug port (DAP). This must be called before other debugging operations.",
     inputSchema: {
       type: "object",
       properties: {
@@ -49,10 +79,46 @@ const tools = [
         },
         port: {
           type: "number",
-          description: "The port number of the Godot debug port (default: 6006 for editor, 6007 for game)",
+          description: "The port number of the Godot debug port (default: 6006)",
           default: 6006
         }
       }
+    }
+  },
+  {
+    name: "disconnect_debugger",
+    description: "Disconnect from the Godot debug port",
+    inputSchema: {
+      type: "object",
+      properties: {}
+    }
+  },
+  // LSP Connection Management
+  {
+    name: "connect_lsp",
+    description: "Connect to the Godot Language Server Protocol (LSP) port for code intelligence features.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        host: {
+          type: "string",
+          description: "The host address of the Godot LSP port (default: 127.0.0.1)",
+          default: "127.0.0.1"
+        },
+        port: {
+          type: "number",
+          description: "The port number of the Godot LSP port (default: 6005)",
+          default: 6005
+        }
+      }
+    }
+  },
+  {
+    name: "disconnect_lsp",
+    description: "Disconnect from the Godot LSP port",
+    inputSchema: {
+      type: "object",
+      properties: {}
     }
   },
   {
@@ -233,12 +299,112 @@ const tools = [
       required: ["threadId"]
     }
   },
+  // LSP Tools
   {
-    name: "disconnect_debugger",
-    description: "Disconnect from the Godot debug port",
+    name: "lsp_get_diagnostics",
+    description: "Get all diagnostics (errors and warnings) for a file or the entire workspace. Diagnostics are collected from LSP notifications.",
     inputSchema: {
       type: "object",
-      properties: {}
+      properties: {
+        uri: {
+          type: "string",
+          description: "File URI (e.g., 'file:///path/to/file.gd'). If omitted, returns diagnostics for all files."
+        }
+      }
+    }
+  },
+  {
+    name: "lsp_hover",
+    description: "Get hover information (documentation, type signatures) for a symbol at a specific position in a file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        uri: {
+          type: "string",
+          description: "File URI (e.g., 'file:///path/to/file.gd')"
+        },
+        line: {
+          type: "number",
+          description: "Line number (0-indexed)"
+        },
+        character: {
+          type: "number",
+          description: "Character position in the line (0-indexed)"
+        }
+      },
+      required: ["uri", "line", "character"]
+    }
+  },
+  {
+    name: "lsp_goto_definition",
+    description: "Get the definition location of a symbol at a specific position.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        uri: {
+          type: "string",
+          description: "File URI (e.g., 'file:///path/to/file.gd')"
+        },
+        line: {
+          type: "number",
+          description: "Line number (0-indexed)"
+        },
+        character: {
+          type: "number",
+          description: "Character position in the line (0-indexed)"
+        }
+      },
+      required: ["uri", "line", "character"]
+    }
+  },
+  {
+    name: "lsp_completion",
+    description: "Get code completion suggestions at a specific position in a file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        uri: {
+          type: "string",
+          description: "File URI (e.g., 'file:///path/to/file.gd')"
+        },
+        line: {
+          type: "number",
+          description: "Line number (0-indexed)"
+        },
+        character: {
+          type: "number",
+          description: "Character position in the line (0-indexed)"
+        }
+      },
+      required: ["uri", "line", "character"]
+    }
+  },
+  {
+    name: "lsp_document_symbols",
+    description: "Get all symbols (functions, classes, variables, etc.) defined in a document.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        uri: {
+          type: "string",
+          description: "File URI (e.g., 'file:///path/to/file.gd')"
+        }
+      },
+      required: ["uri"]
+    }
+  },
+  {
+    name: "lsp_workspace_symbols",
+    description: "Search for symbols across the entire workspace by name.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Search query for symbol names (e.g., 'Player', 'get_health')",
+          default: ""
+        }
+      }
     }
   }
 ];
@@ -249,7 +415,7 @@ const tools = [
 const server = new Server(
   {
     name: "godot-mcp-server",
-    version: "1.0.0",
+    version: "2.0.0",
   },
   {
     capabilities: {
@@ -295,7 +461,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_threads": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('threads');
         return {
           content: [
@@ -308,7 +474,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_stack_trace": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('stackTrace', {
           threadId: args.threadId
         });
@@ -323,7 +489,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_scopes": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('scopes', {
           frameId: args.frameId
         });
@@ -338,7 +504,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_variables": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('variables', {
           variablesReference: args.variablesReference
         });
@@ -353,7 +519,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "evaluate_expression": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const evalArgs = {
           expression: args.expression,
           context: args.context || 'repl'
@@ -373,7 +539,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "set_breakpoint": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const breakpoint = {
           line: args.line
         };
@@ -395,7 +561,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "remove_breakpoints": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('setBreakpoints', {
           source: { path: args.source },
           breakpoints: []
@@ -411,7 +577,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "pause_execution": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const pauseArgs = {};
         if (args.threadId !== undefined) {
           pauseArgs.threadId = args.threadId;
@@ -428,7 +594,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "continue_execution": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('continue', {
           threadId: args.threadId
         });
@@ -443,7 +609,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "step_over": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('next', {
           threadId: args.threadId
         });
@@ -458,7 +624,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "step_into": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('stepIn', {
           threadId: args.threadId
         });
@@ -473,7 +639,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "step_out": {
-        const client = await ensureConnection();
+        const client = await ensureDAPConnection();
         const response = await client.sendRequest('stepOut', {
           threadId: args.threadId
         });
@@ -482,6 +648,150 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: "Stepped out"
+            }
+          ]
+        };
+      }
+
+      // LSP Tools
+      case "connect_lsp": {
+        const host = args.host || LSP_HOST;
+        const port = args.port || LSP_PORT;
+        
+        if (lspClient) {
+          lspClient.disconnect();
+        }
+        
+        lspClient = new LSPClient(host, port);
+        
+        // Listen for diagnostic notifications
+        lspClient.on('notification', (message) => {
+          if (message.method === 'textDocument/publishDiagnostics') {
+            const uri = message.params.uri;
+            const diagnostics = message.params.diagnostics;
+            diagnosticsCache.set(uri, diagnostics);
+          }
+        });
+        
+        await lspClient.connect();
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Successfully connected to Godot LSP port at ${host}:${port}`
+            }
+          ]
+        };
+      }
+
+      case "disconnect_lsp": {
+        if (lspClient) {
+          lspClient.disconnect();
+          lspClient = null;
+          diagnosticsCache.clear();
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Disconnected from Godot LSP port"
+            }
+          ]
+        };
+      }
+
+      case "lsp_get_diagnostics": {
+        await ensureLSPConnection();
+        
+        if (args.uri) {
+          // Get diagnostics for specific file
+          const diagnostics = diagnosticsCache.get(args.uri) || [];
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ uri: args.uri, diagnostics }, null, 2)
+              }
+            ]
+          };
+        } else {
+          // Get diagnostics for all files
+          const allDiagnostics = {};
+          for (const [uri, diagnostics] of diagnosticsCache.entries()) {
+            allDiagnostics[uri] = diagnostics;
+          }
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(allDiagnostics, null, 2)
+              }
+            ]
+          };
+        }
+      }
+
+      case "lsp_hover": {
+        const client = await ensureLSPConnection();
+        const response = await client.hover(args.uri, args.line, args.character);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "lsp_goto_definition": {
+        const client = await ensureLSPConnection();
+        const response = await client.definition(args.uri, args.line, args.character);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "lsp_completion": {
+        const client = await ensureLSPConnection();
+        const response = await client.completion(args.uri, args.line, args.character);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "lsp_document_symbols": {
+        const client = await ensureLSPConnection();
+        const response = await client.documentSymbols(args.uri);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "lsp_workspace_symbols": {
+        const client = await ensureLSPConnection();
+        const response = await client.workspaceSymbols(args.query || '');
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response, null, 2)
             }
           ]
         };

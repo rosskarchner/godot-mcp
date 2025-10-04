@@ -7,7 +7,7 @@ registry:
     title: "Godot Debug & LSP Server"
     type: "server"
     dateAdded: "2025-10-04T00:00:00Z"
-    image: "rosskarchner/godot-mcp-server:latest"
+    image: "godot-mcp-server:latest"
     
     # Tools provided by this server
     tools:

@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  godot-mcp-server:
+    build: .
+    network_mode: host
+    stdin_open: true
+    environment:
+      - GODOT_DEBUG_HOST=127.0.0.1
+      - GODOT_DEBUG_PORT=6006
+    restart: unless-stopped

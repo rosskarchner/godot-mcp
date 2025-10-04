@@ -38,17 +38,13 @@ npm start
 
 ### Using Docker
 
-First, ensure dependencies are installed locally (required for Docker build):
-
-```bash
-npm install
-```
-
 Build the Docker image:
 
 ```bash
 docker build -t godot-mcp-server .
 ```
+
+The Docker build is fully self-contained and will install all dependencies automatically during the build process.
 
 Run with Docker:
 
@@ -61,8 +57,6 @@ Or deploy with `docker mcp`:
 ```bash
 docker mcp install godot-mcp-server
 ```
-
-**Note**: Due to an npm bug in Docker builds, the Dockerfile copies the pre-installed `node_modules` directory. Make sure to run `npm install` on the host before building the Docker image.
 
 ## Configuration
 

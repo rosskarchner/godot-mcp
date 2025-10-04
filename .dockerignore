@@ -8,3 +8,6 @@ test-connection.sh
 docker-compose.yml
 mcp-config-example.json
 USAGE.md
+node_modules
+Dockerfile.test
+Dockerfile.proper

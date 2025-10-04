@@ -18,10 +18,21 @@
 - Removed references to port 6007 (game debug port) as it uses a different custom protocol
 - Clarified that port 6006 is for editor debugging via DAP
 - Updated documentation with LSP usage examples
+- **Docker Build Improvements**:
+  - Made Docker build fully self-contained (no longer requires host node_modules)
+  - Switched from copying node_modules to using `npm ci` during build
+  - Added node_modules to .dockerignore for smaller build context
+  - Updated README to remove confusing "npm install first" requirement
+  - Added LSP environment variables to Dockerfile
 - Bumped version to 2.0.0 to reflect significant new functionality
+
+### Fixed
+- Docker build now works without pre-installed dependencies on host machine
+- Docker build uses correct platform-specific binaries
 
 ### Documentation
 - Created `PROTOCOL_ANALYSIS.md` explaining the different protocols Godot uses
+- Created `DOCKER_ANALYSIS.md` with investigation results and rationale for changes
 - Updated all tool descriptions to be more accurate
 - Added comprehensive LSP usage examples
 

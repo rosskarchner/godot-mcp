@@ -41,11 +41,8 @@
 - Docker build uses correct platform-specific binaries
 
 ### Documentation
-- Created `DOCKER_IMPROVEMENTS.md` summarizing Docker build improvements
-- Created `DOCKER_MCP_GATEWAY.md` with complete gateway integration guide
-- Created `DOCKER_MCP_QUICKSTART.md` for quick deployment
+- Created `DOCKER_DEPLOYMENT.md` with consolidated Docker and gateway deployment guide
 - Created `PROTOCOL_ANALYSIS.md` explaining the different protocols Godot uses
-- Created `DOCKER_ANALYSIS.md` with investigation results and rationale for changes
 - Updated all tool descriptions to be more accurate
 - Added comprehensive LSP usage examples
 

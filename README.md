@@ -46,25 +46,26 @@ docker build -t godot-mcp-server .
 
 The Docker build is fully self-contained and will install all dependencies automatically during the build process.
 
-**Run with Docker directly:**
-
-```bash
-docker run -i --network host godot-mcp-server
-```
-
-**Or use Docker MCP Gateway (recommended):**
+**Run with Docker MCP Gateway (recommended):**
 
 ```bash
 docker mcp gateway run --server docker://godot-mcp-server:latest
 ```
 
-The Docker MCP Gateway provides better management, security, and integration with AI clients. See [DOCKER_MCP_GATEWAY.md](DOCKER_MCP_GATEWAY.md) for complete documentation.
-
-**Or deploy with docker-compose:**
+**Or run directly:**
 
 ```bash
-docker compose up -d
+docker run -i --network host godot-mcp-server
 ```
+
+**Or use docker-compose:**
+
+```bash
+docker compose --profile gateway up -d  # With gateway
+docker compose --profile direct up -d   # Direct server
+```
+
+See [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) for complete deployment guide.
 
 ## Configuration
 

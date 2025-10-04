@@ -2,6 +2,8 @@
 
 An MCP (Model Context Protocol) server that connects to Godot's Debug Adapter Protocol (DAP) and Language Server Protocol (LSP) ports, enabling AI assistants to interact with running Godot instances for debugging, code intelligence, and project inspection.
 
+You may also want to check out [this other godot MCP server](https://github.com/Coding-Solo/godot-mcp), which takes a different approach.
+
 ## Features
 
 ### Debugging (DAP - Port 6006)

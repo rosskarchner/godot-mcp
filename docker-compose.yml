@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Option 1: Run the server directly
   godot-mcp-server:
     build: .
     network_mode: host
@@ -8,4 +9,43 @@ services:
     environment:
       - GODOT_DEBUG_HOST=127.0.0.1
       - GODOT_DEBUG_PORT=6006
+      - GODOT_LSP_HOST=127.0.0.1
+      - GODOT_LSP_PORT=6005
     restart: unless-stopped
+    profiles:
+      - direct
+
+  # Option 2: Run with Docker MCP Gateway (recommended)
+  godot-mcp-gateway:
+    image: docker/mcp-gateway
+    command:
+      - gateway
+      - run
+      - --server
+      - docker://godot-mcp-server:latest
+      - --transport
+      - streaming
+      - --port
+      - "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GODOT_DEBUG_HOST=host.docker.internal
+      - GODOT_DEBUG_PORT=6006
+      - GODOT_LSP_HOST=host.docker.internal
+      - GODOT_LSP_PORT=6005
+    restart: unless-stopped
+    depends_on:
+      - build-server
+    profiles:
+      - gateway
+
+  # Helper service to ensure the image is built
+  build-server:
+    build: .
+    image: godot-mcp-server:latest
+    command: ["true"]  # Just build, don't run
+    profiles:
+      - gateway

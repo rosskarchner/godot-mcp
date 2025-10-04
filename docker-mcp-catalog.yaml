@@ -1,0 +1,107 @@
+name: godot-mcp-catalog
+displayName: Godot MCP Server Catalog
+description: Custom catalog for Godot debugging and code intelligence
+registry:
+  godot-mcp-server:
+    description: "MCP server providing debugging (DAP) and code intelligence (LSP) for Godot Engine. Connect to Godot editor for breakpoints, variable inspection, stack traces, diagnostics, hover documentation, and code completion."
+    title: "Godot Debug & LSP Server"
+    type: "server"
+    dateAdded: "2025-10-04T00:00:00Z"
+    image: "rosskarchner/godot-mcp-server:latest"
+    
+    # Tools provided by this server
+    tools:
+      # DAP Connection
+      - name: "connect_debugger"
+        description: "Connect to Godot's Debug Adapter Protocol (DAP) port"
+      - name: "disconnect_debugger"
+        description: "Disconnect from DAP"
+      
+      # LSP Connection
+      - name: "connect_lsp"
+        description: "Connect to Godot's Language Server Protocol (LSP) port"
+      - name: "disconnect_lsp"
+        description: "Disconnect from LSP"
+      
+      # Debugging Tools
+      - name: "get_threads"
+        description: "List all threads in running Godot instance"
+      - name: "get_stack_trace"
+        description: "Get stack trace for a thread"
+      - name: "get_scopes"
+        description: "Get variable scopes for a stack frame"
+      - name: "get_variables"
+        description: "Get variables in a scope"
+      - name: "evaluate_expression"
+        description: "Evaluate GDScript expressions"
+      - name: "set_breakpoint"
+        description: "Set a breakpoint in source file"
+      - name: "remove_breakpoints"
+        description: "Remove breakpoints from a file"
+      - name: "pause_execution"
+        description: "Pause game execution"
+      - name: "continue_execution"
+        description: "Continue after pause/breakpoint"
+      - name: "step_over"
+        description: "Step over current line"
+      - name: "step_into"
+        description: "Step into function call"
+      - name: "step_out"
+        description: "Step out of current function"
+      
+      # LSP Tools
+      - name: "lsp_get_diagnostics"
+        description: "Get errors/warnings for files"
+      - name: "lsp_hover"
+        description: "Get documentation for symbols"
+      - name: "lsp_goto_definition"
+        description: "Find symbol definition"
+      - name: "lsp_completion"
+        description: "Get code completion suggestions"
+      - name: "lsp_document_symbols"
+        description: "List symbols in a document"
+      - name: "lsp_workspace_symbols"
+        description: "Search symbols in workspace"
+    
+    # Environment variables for connecting to Godot
+    env:
+      - name: "GODOT_DEBUG_HOST"
+        value: "{{godot-mcp-server.debug_host}}"
+        description: "Host address for Godot DAP port"
+      - name: "GODOT_DEBUG_PORT"
+        value: "{{godot-mcp-server.debug_port}}"
+        description: "Port for Godot DAP (default: 6006)"
+      - name: "GODOT_LSP_HOST"
+        value: "{{godot-mcp-server.lsp_host}}"
+        description: "Host address for Godot LSP port"
+      - name: "GODOT_LSP_PORT"
+        value: "{{godot-mcp-server.lsp_port}}"
+        description: "Port for Godot LSP (default: 6005)"
+    
+    # Configuration schema
+    config:
+      - name: "godot-mcp-server"
+        description: "Godot MCP Server configuration"
+        type: "object"
+        properties:
+          debug_host:
+            type: "string"
+            description: "Host where Godot editor is running (use host.docker.internal for Docker Desktop on localhost)"
+            default: "host.docker.internal"
+          debug_port:
+            type: "string"
+            description: "Godot Debug Adapter Protocol (DAP) port"
+            default: "6006"
+          lsp_host:
+            type: "string"
+            description: "Host where Godot editor is running (use host.docker.internal for Docker Desktop on localhost)"
+            default: "host.docker.internal"
+          lsp_port:
+            type: "string"
+            description: "Godot Language Server Protocol (LSP) port"
+            default: "6005"
+        required:
+          - debug_host
+          - debug_port
+          - lsp_host
+          - lsp_port

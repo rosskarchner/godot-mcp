@@ -12,6 +12,12 @@
   - `lsp_completion` - Get code completion suggestions
   - `lsp_document_symbols` - List all symbols in a document
   - `lsp_workspace_symbols` - Search for symbols across the workspace
+- **Docker MCP Gateway Integration**
+  - Added Docker MCP metadata label to Dockerfile for self-contained operation
+  - Created `docker-mcp-catalog.yaml` for custom catalog integration
+  - Comprehensive documentation in `DOCKER_MCP_GATEWAY.md`
+  - Quick start guide in `DOCKER_MCP_QUICKSTART.md`
+  - Updated docker-compose.yml with gateway profile
 
 ### Changed
 - Updated README.md to reflect dual protocol support (DAP + LSP)
@@ -24,6 +30,10 @@
   - Added node_modules to .dockerignore for smaller build context
   - Updated README to remove confusing "npm install first" requirement
   - Added LSP environment variables to Dockerfile
+- **Docker Deployment Options**:
+  - Added Docker MCP Gateway as recommended deployment method
+  - Updated docker-compose.yml with multiple deployment profiles  
+  - Added gateway configuration examples
 - Bumped version to 2.0.0 to reflect significant new functionality
 
 ### Fixed
@@ -31,6 +41,9 @@
 - Docker build uses correct platform-specific binaries
 
 ### Documentation
+- Created `DOCKER_IMPROVEMENTS.md` summarizing Docker build improvements
+- Created `DOCKER_MCP_GATEWAY.md` with complete gateway integration guide
+- Created `DOCKER_MCP_QUICKSTART.md` for quick deployment
 - Created `PROTOCOL_ANALYSIS.md` explaining the different protocols Godot uses
 - Created `DOCKER_ANALYSIS.md` with investigation results and rationale for changes
 - Updated all tool descriptions to be more accurate

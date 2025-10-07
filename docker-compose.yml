@@ -36,6 +36,8 @@ services:
       - GODOT_DEBUG_PORT=6006
       - GODOT_LSP_HOST=host.docker.internal
       - GODOT_LSP_PORT=6005
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     depends_on:
       - build-server

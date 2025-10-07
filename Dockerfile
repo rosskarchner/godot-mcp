@@ -32,6 +32,7 @@ LABEL io.docker.server.metadata='{\
     {"name": "GODOT_LSP_HOST", "value": "{{godot-mcp-server.lsp_host}}"},\
     {"name": "GODOT_LSP_PORT", "value": "{{godot-mcp-server.lsp_port}}"}\
   ],\
+  "extra_hosts": ["host.docker.internal:host-gateway"],\
   "config": [\
     {\
       "name": "godot-mcp-server",\

@@ -67,8 +67,8 @@ async function ensureLSPConnection() {
 const tools = [
   // DAP Connection Management
   {
-    name: "connect_debugger",
-    description: "Connect to the Godot debug port (DAP). This must be called before other debugging operations.",
+    name: "godot_debug_connect",
+    description: "Connect to Godot's debugger (DAP) to enable debugging operations like breakpoints, stepping, and variable inspection. Must be called before using any debug tools.",
     inputSchema: {
       type: "object",
       properties: {
@@ -86,8 +86,8 @@ const tools = [
     }
   },
   {
-    name: "disconnect_debugger",
-    description: "Disconnect from the Godot debug port",
+    name: "godot_debug_disconnect",
+    description: "Disconnect from Godot's debugger and clean up the debug session",
     inputSchema: {
       type: "object",
       properties: {}
@@ -95,8 +95,8 @@ const tools = [
   },
   // LSP Connection Management
   {
-    name: "connect_lsp",
-    description: "Connect to the Godot Language Server Protocol (LSP) port for code intelligence features.",
+    name: "godot_lsp_connect",
+    description: "Connect to Godot's Language Server to enable code intelligence features like autocomplete, diagnostics, go-to-definition, and symbol search.",
     inputSchema: {
       type: "object",
       properties: {
@@ -114,76 +114,76 @@ const tools = [
     }
   },
   {
-    name: "disconnect_lsp",
-    description: "Disconnect from the Godot LSP port",
+    name: "godot_lsp_disconnect",
+    description: "Disconnect from Godot's Language Server and clear cached diagnostics",
     inputSchema: {
       type: "object",
       properties: {}
     }
   },
   {
-    name: "get_threads",
-    description: "Get list of all threads in the running Godot instance",
+    name: "godot_debug_list_threads",
+    description: "List all running threads in the Godot game. Use this to identify which thread to debug when setting breakpoints or stepping through code.",
     inputSchema: {
       type: "object",
       properties: {}
     }
   },
   {
-    name: "get_stack_trace",
-    description: "Get the stack trace for a specific thread. Useful for understanding the current execution state.",
+    name: "godot_debug_get_stacktrace",
+    description: "Get the current call stack for a thread, showing which functions are executing and their file locations. Essential for understanding program flow and getting file paths for breakpoints.",
     inputSchema: {
       type: "object",
       properties: {
         threadId: {
           type: "number",
-          description: "The thread ID to get the stack trace for"
+          description: "The thread ID to get the stack trace for (obtain from godot_debug_list_threads)"
         }
       },
       required: ["threadId"]
     }
   },
   {
-    name: "get_scopes",
-    description: "Get variable scopes (local, global, etc.) for a specific stack frame",
+    name: "godot_debug_get_scopes",
+    description: "Get available variable scopes (local, global, etc.) for a stack frame. Use this to find the variablesReference needed to inspect variables.",
     inputSchema: {
       type: "object",
       properties: {
         frameId: {
           type: "number",
-          description: "The stack frame ID to get scopes for"
+          description: "The stack frame ID from godot_debug_get_stacktrace"
         }
       },
       required: ["frameId"]
     }
   },
   {
-    name: "get_variables",
-    description: "Get variables in a specific scope. Use this to inspect local variables, globals, etc.",
+    name: "godot_debug_inspect_variables",
+    description: "Inspect variables in a specific scope (local, global, etc.). Shows variable names, values, and types. Use the variablesReference from godot_debug_get_scopes.",
     inputSchema: {
       type: "object",
       properties: {
         variablesReference: {
           type: "number",
-          description: "The variables reference from a scope or parent variable"
+          description: "The variables reference ID from godot_debug_get_scopes or from a parent variable with children"
         }
       },
       required: ["variablesReference"]
     }
   },
   {
-    name: "evaluate_expression",
-    description: "Evaluate a GDScript expression in the context of the running game. Useful for inspecting state or testing code.",
+    name: "godot_debug_evaluate",
+    description: "Execute a GDScript expression in the running game and get the result. Perfect for testing code, checking object states, or calling functions during debugging.",
     inputSchema: {
       type: "object",
       properties: {
         expression: {
           type: "string",
-          description: "The GDScript expression to evaluate"
+          description: "The GDScript expression to evaluate (e.g., 'player.health', 'get_node(\"Player\").position')"
         },
         frameId: {
           type: "number",
-          description: "Optional frame ID to evaluate in context of a specific stack frame"
+          description: "Optional: frame ID to evaluate in a specific stack frame context (from godot_debug_get_stacktrace)"
         },
         context: {
           type: "string",
@@ -195,105 +195,105 @@ const tools = [
     }
   },
   {
-    name: "set_breakpoint",
-    description: "Set a breakpoint in a source file at a specific line number. Note: Requires full filesystem path, not res:// format. Get the correct path from stack traces.",
+    name: "godot_debug_set_breakpoint",
+    description: "Set a breakpoint at a specific line in a GDScript file. Execution will pause when this line is reached. IMPORTANT: Use full filesystem paths (from godot_debug_get_stacktrace), NOT res:// paths.",
     inputSchema: {
       type: "object",
       properties: {
         source: {
           type: "string",
-          description: "Full filesystem path to the source file (e.g., '/home/user/project/scripts/player.gd'). Use get_stack_trace to obtain correct paths."
+          description: "Full filesystem path to the GDScript file (e.g., '/home/user/project/scripts/player.gd'). Get correct paths from godot_debug_get_stacktrace."
         },
         line: {
           type: "number",
-          description: "Line number to set the breakpoint (1-indexed)"
+          description: "Line number to set the breakpoint at (1-indexed, first line is 1)"
         },
         condition: {
           type: "string",
-          description: "Optional condition expression for conditional breakpoint"
+          description: "Optional: GDScript expression that must be true for breakpoint to trigger (e.g., 'health <= 0')"
         }
       },
       required: ["source", "line"]
     }
   },
   {
-    name: "remove_breakpoints",
-    description: "Remove all breakpoints from a source file",
+    name: "godot_debug_clear_breakpoints",
+    description: "Remove all breakpoints from a specific GDScript file",
     inputSchema: {
       type: "object",
       properties: {
         source: {
           type: "string",
-          description: "Path to the source file to remove breakpoints from"
+          description: "Full filesystem path to the GDScript file to clear breakpoints from"
         }
       },
       required: ["source"]
     }
   },
   {
-    name: "pause_execution",
-    description: "Pause the execution of the running Godot game",
+    name: "godot_debug_pause",
+    description: "Pause execution of the running Godot game immediately. Use this to freeze the game and inspect its current state.",
     inputSchema: {
       type: "object",
       properties: {
         threadId: {
           type: "number",
-          description: "Optional thread ID to pause (if not specified, pauses all threads)"
+          description: "Optional: specific thread ID to pause (if not specified, pauses all threads)"
         }
       }
     }
   },
   {
-    name: "continue_execution",
-    description: "Continue execution after a pause or breakpoint",
+    name: "godot_debug_continue",
+    description: "Resume execution after the game has been paused (by breakpoint or manual pause). The game will run until the next breakpoint or pause.",
     inputSchema: {
       type: "object",
       properties: {
         threadId: {
           type: "number",
-          description: "The thread ID to continue"
+          description: "The thread ID to resume execution (from godot_debug_list_threads)"
         }
       },
       required: ["threadId"]
     }
   },
   {
-    name: "step_over",
-    description: "Step over the current line (execute the line but don't step into function calls)",
+    name: "godot_debug_step_over",
+    description: "Execute the current line and move to the next line, stepping OVER any function calls (don't enter them). Use for quick debugging without diving into functions.",
     inputSchema: {
       type: "object",
       properties: {
         threadId: {
           type: "number",
-          description: "The thread ID to step"
+          description: "The thread ID to step (from godot_debug_list_threads)"
         }
       },
       required: ["threadId"]
     }
   },
   {
-    name: "step_into",
-    description: "Step into the next function call",
+    name: "godot_debug_step_into",
+    description: "Execute the current line and step INTO any function calls to debug them line-by-line. Use when you want to examine what happens inside a function.",
     inputSchema: {
       type: "object",
       properties: {
         threadId: {
           type: "number",
-          description: "The thread ID to step"
+          description: "The thread ID to step (from godot_debug_list_threads)"
         }
       },
       required: ["threadId"]
     }
   },
   {
-    name: "step_out",
-    description: "Step out of the current function",
+    name: "godot_debug_step_out",
+    description: "Complete execution of the current function and return to the caller. Use to quickly exit a function you've stepped into.",
     inputSchema: {
       type: "object",
       properties: {
         threadId: {
           type: "number",
-          description: "The thread ID to step"
+          description: "The thread ID to step out (from godot_debug_list_threads)"
         }
       },
       required: ["threadId"]
@@ -301,21 +301,21 @@ const tools = [
   },
   // LSP Tools
   {
-    name: "lsp_get_diagnostics",
-    description: "Get all diagnostics (errors and warnings) for a file or the entire workspace. Diagnostics are collected from LSP notifications.",
+    name: "godot_lsp_get_errors",
+    description: "Get syntax errors, type errors, and warnings for GDScript files. Returns diagnostics for a specific file or all open files. Use this to find and fix code issues.",
     inputSchema: {
       type: "object",
       properties: {
         uri: {
           type: "string",
-          description: "File URI (e.g., 'file:///path/to/file.gd'). If omitted, returns diagnostics for all files."
+          description: "Optional: file URI to get diagnostics for (e.g., 'file:///path/to/file.gd'). If omitted, returns all diagnostics."
         }
       }
     }
   },
   {
-    name: "lsp_hover",
-    description: "Get hover information (documentation, type signatures) for a symbol at a specific position in a file.",
+    name: "godot_lsp_get_symbol_info",
+    description: "Get documentation, type information, and usage details for a symbol (function, class, variable) at a cursor position. Equivalent to hovering in an IDE.",
     inputSchema: {
       type: "object",
       properties: {
@@ -325,19 +325,41 @@ const tools = [
         },
         line: {
           type: "number",
-          description: "Line number (0-indexed)"
+          description: "Line number where the symbol is (0-indexed, first line is 0)"
         },
         character: {
           type: "number",
-          description: "Character position in the line (0-indexed)"
+          description: "Character position in the line (0-indexed, first character is 0)"
         }
       },
       required: ["uri", "line", "character"]
     }
   },
   {
-    name: "lsp_goto_definition",
-    description: "Get the definition location of a symbol at a specific position.",
+    name: "godot_lsp_find_definition",
+    description: "Find where a symbol (function, class, variable) is defined. Returns the file location and line number of the definition.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        uri: {
+          type: "string",
+          description: "File URI where the symbol reference is (e.g., 'file:///path/to/file.gd')"
+        },
+        line: {
+          type: "number",
+          description: "Line number of the symbol reference (0-indexed)"
+        },
+        character: {
+          type: "number",
+          description: "Character position of the symbol reference (0-indexed)"
+        }
+      },
+      required: ["uri", "line", "character"]
+    }
+  },
+  {
+    name: "godot_lsp_autocomplete",
+    description: "Get code completion suggestions at a cursor position. Returns available methods, properties, classes, and keywords that can be used at that location.",
     inputSchema: {
       type: "object",
       properties: {
@@ -347,61 +369,39 @@ const tools = [
         },
         line: {
           type: "number",
-          description: "Line number (0-indexed)"
+          description: "Line number for completion (0-indexed)"
         },
         character: {
           type: "number",
-          description: "Character position in the line (0-indexed)"
+          description: "Character position for completion (0-indexed)"
         }
       },
       required: ["uri", "line", "character"]
     }
   },
   {
-    name: "lsp_completion",
-    description: "Get code completion suggestions at a specific position in a file.",
+    name: "godot_lsp_list_symbols",
+    description: "List all symbols (functions, classes, variables, signals, etc.) defined in a GDScript file. Useful for understanding file structure.",
     inputSchema: {
       type: "object",
       properties: {
         uri: {
           type: "string",
-          description: "File URI (e.g., 'file:///path/to/file.gd')"
-        },
-        line: {
-          type: "number",
-          description: "Line number (0-indexed)"
-        },
-        character: {
-          type: "number",
-          description: "Character position in the line (0-indexed)"
-        }
-      },
-      required: ["uri", "line", "character"]
-    }
-  },
-  {
-    name: "lsp_document_symbols",
-    description: "Get all symbols (functions, classes, variables, etc.) defined in a document.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        uri: {
-          type: "string",
-          description: "File URI (e.g., 'file:///path/to/file.gd')"
+          description: "File URI to get symbols from (e.g., 'file:///path/to/file.gd')"
         }
       },
       required: ["uri"]
     }
   },
   {
-    name: "lsp_workspace_symbols",
-    description: "Search for symbols across the entire workspace by name.",
+    name: "godot_lsp_search_symbols",
+    description: "Search for symbols (functions, classes, variables) across the entire Godot project by name. Returns matching symbols with their locations.",
     inputSchema: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Search query for symbol names (e.g., 'Player', 'get_health')",
+          description: "Search query for symbol names (e.g., 'Player', 'get_health'). Empty string returns all symbols.",
           default: ""
         }
       }
@@ -439,17 +439,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case "connect_debugger": {
+      case "godot_debug_connect": {
         const host = args.host || DEBUG_HOST;
         const port = args.port || DEBUG_PORT;
-        
+
         if (dapClient) {
           dapClient.disconnect();
         }
-        
+
         dapClient = new DAPClient(host, port);
         await dapClient.connect();
-        
+
         return {
           content: [
             {
@@ -460,7 +460,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "get_threads": {
+      case "godot_debug_list_threads": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('threads');
         return {
@@ -473,7 +473,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "get_stack_trace": {
+      case "godot_debug_get_stacktrace": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('stackTrace', {
           threadId: args.threadId
@@ -488,7 +488,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "get_scopes": {
+      case "godot_debug_get_scopes": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('scopes', {
           frameId: args.frameId
@@ -503,7 +503,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "get_variables": {
+      case "godot_debug_inspect_variables": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('variables', {
           variablesReference: args.variablesReference
@@ -518,7 +518,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "evaluate_expression": {
+      case "godot_debug_evaluate": {
         const client = await ensureDAPConnection();
         const evalArgs = {
           expression: args.expression,
@@ -538,7 +538,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "set_breakpoint": {
+      case "godot_debug_set_breakpoint": {
         const client = await ensureDAPConnection();
         const breakpoint = {
           line: args.line
@@ -560,7 +560,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "remove_breakpoints": {
+      case "godot_debug_clear_breakpoints": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('setBreakpoints', {
           source: { path: args.source },
@@ -576,7 +576,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "pause_execution": {
+      case "godot_debug_pause": {
         const client = await ensureDAPConnection();
         const pauseArgs = {};
         if (args.threadId !== undefined) {
@@ -593,7 +593,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "continue_execution": {
+      case "godot_debug_continue": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('continue', {
           threadId: args.threadId
@@ -608,7 +608,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "step_over": {
+      case "godot_debug_step_over": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('next', {
           threadId: args.threadId
@@ -623,7 +623,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "step_into": {
+      case "godot_debug_step_into": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('stepIn', {
           threadId: args.threadId
@@ -638,7 +638,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "step_out": {
+      case "godot_debug_step_out": {
         const client = await ensureDAPConnection();
         const response = await client.sendRequest('stepOut', {
           threadId: args.threadId
@@ -654,16 +654,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       // LSP Tools
-      case "connect_lsp": {
+      case "godot_lsp_connect": {
         const host = args.host || LSP_HOST;
         const port = args.port || LSP_PORT;
-        
+
         if (lspClient) {
           lspClient.disconnect();
         }
-        
+
         lspClient = new LSPClient(host, port);
-        
+
         // Listen for diagnostic notifications
         lspClient.on('notification', (message) => {
           if (message.method === 'textDocument/publishDiagnostics') {
@@ -672,9 +672,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             diagnosticsCache.set(uri, diagnostics);
           }
         });
-        
+
         await lspClient.connect();
-        
+
         return {
           content: [
             {
@@ -685,7 +685,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "disconnect_lsp": {
+      case "godot_lsp_disconnect": {
         if (lspClient) {
           lspClient.disconnect();
           lspClient = null;
@@ -701,9 +701,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "lsp_get_diagnostics": {
+      case "godot_lsp_get_errors": {
         await ensureLSPConnection();
-        
+
         if (args.uri) {
           // Get diagnostics for specific file
           const diagnostics = diagnosticsCache.get(args.uri) || [];
@@ -732,7 +732,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       }
 
-      case "lsp_hover": {
+      case "godot_lsp_get_symbol_info": {
         const client = await ensureLSPConnection();
         const response = await client.hover(args.uri, args.line, args.character);
         return {
@@ -745,7 +745,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "lsp_goto_definition": {
+      case "godot_lsp_find_definition": {
         const client = await ensureLSPConnection();
         const response = await client.definition(args.uri, args.line, args.character);
         return {
@@ -758,7 +758,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "lsp_completion": {
+      case "godot_lsp_autocomplete": {
         const client = await ensureLSPConnection();
         const response = await client.completion(args.uri, args.line, args.character);
         return {
@@ -771,7 +771,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "lsp_document_symbols": {
+      case "godot_lsp_list_symbols": {
         const client = await ensureLSPConnection();
         const response = await client.documentSymbols(args.uri);
         return {
@@ -784,7 +784,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "lsp_workspace_symbols": {
+      case "godot_lsp_search_symbols": {
         const client = await ensureLSPConnection();
         const response = await client.workspaceSymbols(args.query || '');
         return {
@@ -797,7 +797,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "disconnect_debugger": {
+      case "godot_debug_disconnect": {
         if (dapClient) {
           dapClient.disconnect();
           dapClient = null;

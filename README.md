@@ -68,7 +68,6 @@ GODOT_DEBUG_HOST=127.0.0.1 GODOT_DEBUG_PORT=6006 node src/index.js
 - **Execution Control**: `pause_execution`, `continue_execution`, `step_over`, `step_into`, `step_out`
 - **Inspection**: `get_threads`, `get_stack_trace`, `get_scopes`, `get_variables`
 - **Breakpoints**: `set_breakpoint`, `remove_breakpoints`
-- **Evaluation**: `evaluate_expression`
 
 ### Code Intelligence (LSP)
 - **Diagnostics**: `lsp_get_diagnostics`

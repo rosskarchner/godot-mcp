@@ -32,8 +32,6 @@ registry:
         description: "Get variable scopes for a stack frame"
       - name: "godot_debug_inspect_variables"
         description: "Inspect variables in a specific scope"
-      - name: "godot_debug_evaluate"
-        description: "Execute GDScript expressions in running game"
       - name: "godot_debug_set_breakpoint"
         description: "Set a breakpoint at a specific line"
       - name: "godot_debug_clear_breakpoints"

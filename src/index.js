@@ -172,29 +172,6 @@ const tools = [
     }
   },
   {
-    name: "godot_debug_evaluate",
-    description: "Execute a GDScript expression in the running game and get the result. Perfect for testing code, checking object states, or calling functions during debugging.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        expression: {
-          type: "string",
-          description: "The GDScript expression to evaluate (e.g., 'player.health', 'get_node(\"Player\").position')"
-        },
-        frameId: {
-          type: "number",
-          description: "Optional: frame ID to evaluate in a specific stack frame context (from godot_debug_get_stacktrace)"
-        },
-        context: {
-          type: "string",
-          description: "Evaluation context: 'watch', 'repl', 'hover', or 'clipboard'",
-          default: "repl"
-        }
-      },
-      required: ["expression"]
-    }
-  },
-  {
     name: "godot_debug_set_breakpoint",
     description: "Set a breakpoint at a specific line in a GDScript file. Execution will pause when this line is reached. IMPORTANT: Use full filesystem paths (from godot_debug_get_stacktrace), NOT res:// paths.",
     inputSchema: {
@@ -508,26 +485,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const response = await client.sendRequest('variables', {
           variablesReference: args.variablesReference
         });
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(response, null, 2)
-            }
-          ]
-        };
-      }
-
-      case "godot_debug_evaluate": {
-        const client = await ensureDAPConnection();
-        const evalArgs = {
-          expression: args.expression,
-          context: args.context || 'repl'
-        };
-        if (args.frameId !== undefined) {
-          evalArgs.frameId = args.frameId;
-        }
-        const response = await client.sendRequest('evaluate', evalArgs);
         return {
           content: [
             {

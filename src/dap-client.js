@@ -113,7 +113,7 @@ export class DAPClient extends EventEmitter {
   /**
    * Send a DAP request
    */
-  async sendRequest(command, args = {}) {
+  async sendRequest(command, args = {}, timeout = null) {
     if (!this.connected) {
       throw new Error('Not connected to Godot debug port');
     }
@@ -128,10 +128,17 @@ export class DAPClient extends EventEmitter {
 
     const message = JSON.stringify(request);
     const header = `Content-Length: ${message.length}\r\n\r\n`;
-    
+
+    // Set timeout based on command type if not explicitly provided
+    if (timeout === null) {
+      // Commands that may take longer
+      const longRunningCommands = ['evaluate', 'continue', 'stepIn', 'stepOut', 'next'];
+      timeout = longRunningCommands.includes(command) ? 30000 : 10000;
+    }
+
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(seq, { resolve, reject });
-      
+
       this.socket.write(header + message, (error) => {
         if (error) {
           this.pendingRequests.delete(seq);
@@ -139,13 +146,13 @@ export class DAPClient extends EventEmitter {
         }
       });
 
-      // Timeout after 10 seconds
+      // Timeout based on command type or explicit parameter
       setTimeout(() => {
         if (this.pendingRequests.has(seq)) {
           this.pendingRequests.delete(seq);
-          reject(new Error('Request timeout'));
+          reject(new Error(`Request timeout after ${timeout}ms`));
         }
-      }, 10000);
+      }, timeout);
     });
   }
 

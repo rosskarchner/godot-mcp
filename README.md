@@ -2,6 +2,10 @@
 
 MCP server for debugging and code intelligence with Godot Engine. Connects to Godot's Debug Adapter Protocol (DAP) and Language Server Protocol (LSP) for AI-assisted development.
 
+You may also be interested in:
+- [A different (somewhat overlapping) Godot MCP implementation](https://github.com/Coding-Solo/godot-mcp)
+- [An MCP server that runs as a Godot Engine plugin](https://github.com/rosskarchner/godot-mcp-plugin)
+
 ## Quick Start
 
 ```bash

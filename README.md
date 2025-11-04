@@ -4,6 +4,10 @@ MCP server for **runtime debugging** and **code intelligence** with Godot Engine
 
 > **Note**: This server provides DAP/LSP debugging and code intelligence. For editor manipulation (scene/node management), use [godot-mcp-plugin](https://github.com/rosskarchner/godot-mcp-plugin).
 
+You may also be interested in:
+- [A different (somewhat overlapping) Godot MCP implementation](https://github.com/Coding-Solo/godot-mcp)
+- [An MCP server that runs as a Godot Engine plugin](https://github.com/rosskarchner/godot-mcp-plugin)
+
 ## Quick Start
 
 ```bash

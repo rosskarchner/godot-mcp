@@ -1,6 +1,14 @@
+# Godot
+.godot/
+*.import
+export.cfg
+export_presets.cfg
+
+# Node
 node_modules/
-.DS_Store
+npm-debug.log
+
+# MCP Server
+.instances.json
+mcp_screenshots/
 *.log
-.env
-dist/
-build/

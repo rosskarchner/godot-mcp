@@ -1,0 +1,77 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8yh17xpaq4yh"]
+
+[ext_resource type="Script" id="0" uid="uid://dqxakmoxqtxpxc" path="res://scripts/test_node.gd"]
+
+[node name="TestRoot" type="Node2D"]
+position = Vector2(512, 384)
+
+[node name="Properties" type="Node2D" parent="."]
+position = Vector2(100, 100)
+rotation = 0.5
+
+[node name="TransformTest" type="Node2D" parent="Properties"]
+position = Vector2(50, 75)
+rotation = 1.0
+scale = Vector2(2, 1.5)
+
+[node name="Canvas" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Sprites" type="Node" parent="Canvas"]
+
+[node name="Sprite1" type="Sprite2D" parent="Canvas/Sprites"]
+position = Vector2(200, 150)
+modulate = Color(1, 0, 0, 1)
+
+[node name="Sprite2" type="Sprite2D" parent="Canvas/Sprites"]
+position = Vector2(250, 150)
+modulate = Color(0, 1, 0, 0.8)
+
+[node name="Areas" type="Node" parent="."]
+
+[node name="Area2D_1" type="Area2D" parent="Areas"]
+position = Vector2(-100, -100)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/Area2D_1"]
+
+[node name="Area2D_2" type="Area2D" parent="Areas"]
+position = Vector2(100, 100)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Areas/Area2D_2"]
+
+[node name="ScriptedNode" type="Node" parent="."]
+script = ExtResource("0")
+
+[node name="Children" type="Node" parent="ScriptedNode"]
+
+[node name="Child_1" type="Node" parent="ScriptedNode/Children"]
+
+[node name="Child_2" type="Node" parent="ScriptedNode/Children"]
+
+[node name="Grandchild" type="Node" parent="ScriptedNode/Children/Child_1"]
+
+[node name="UI" type="Control" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 1024.0
+offset_bottom = 768.0
+
+[node name="Label" type="Label" parent="UI"]
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 350.0
+offset_bottom = 100.0
+text = "Test Framework Scene"
+
+[node name="Button" type="Button" parent="UI"]
+offset_left = 50.0
+offset_top = 120.0
+offset_right = 150.0
+offset_bottom = 160.0
+text = "Click Me"
+
+[node name="Panel" type="Panel" parent="UI"]
+offset_left = 400.0
+offset_top = 50.0
+offset_right = 700.0
+offset_bottom = 200.0

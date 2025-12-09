@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://c8vwxqr4n7y8p"]
+
+[node name="TestScene" type="Node2D"]
+
+[node name="Label" type="Label" parent="."]
+offset_right = 200.0
+offset_bottom = 50.0
+text = "MCP Server Test Scene"
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(100, 100)
+
+[node name="Camera2D" type="Camera2D" parent="."]

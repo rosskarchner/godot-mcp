@@ -579,35 +579,6 @@ const lspSearchSymbolsTool = {
   }
 };
 
-// Search tool (for Phase 2)
-const searchToolTool = {
-  name: "godot_search_tools",
-  description: "Search for relevant Godot debugging or code intelligence tools based on your task. Use this to discover which tools are available for specific workflows like setting breakpoints, inspecting variables, or analyzing code.",
-  category: "discovery",
-  protocol: "internal",
-  tags: ["search", "discover", "help", "find"],
-  visibility: "always",
-  inputSchema: {
-    type: "object",
-    properties: {
-      query: {
-        type: "string",
-        description: "Natural language description or keywords to search for (e.g., 'set breakpoint', 'inspect variables', 'find function')"
-      },
-      protocol: {
-        type: "string",
-        enum: ["dap", "lsp"],
-        description: "Optional: filter by protocol ('dap' for runtime debugging, 'lsp' for code intelligence)"
-      },
-      category: {
-        type: "string",
-        description: "Optional: filter by category (e.g., 'dap-debugging', 'lsp-code-intelligence')"
-      }
-    },
-    required: ["query"]
-  }
-};
-
 // Export all tools
 export const allTools = [
   dapConnectTool,
@@ -630,8 +601,7 @@ export const allTools = [
   lspFindDefinitionTool,
   lspAutocompleteTool,
   lspListSymbolsTool,
-  lspSearchSymbolsTool,
-  searchToolTool
+  lspSearchSymbolsTool
 ];
 
 export const connectionTools = [
@@ -665,8 +635,7 @@ export const lspTools = [
 ];
 
 export const alwaysVisibleTools = [
-  ...connectionTools,
-  searchToolTool
+  ...connectionTools
 ];
 
 export const deferredTools = [

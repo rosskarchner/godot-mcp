@@ -31,10 +31,6 @@ A powerful **Model Context Protocol (MCP)** server that connects AI agents direc
     ```bash
     npm install
     ```
-3.  Build (optional, if using TypeScript source later, currently strictly JS):
-    ```bash
-    # No build step required for current JS version
-    ```
 
 ## Configuration (Claude Desktop)
 

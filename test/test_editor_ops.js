@@ -103,8 +103,7 @@ async function main() {
         // root node has script?
         await client.callTool({ name: "godot_script_get", arguments: { node_path: "." } }); // Root
 
-        console.log("[Test] Reading Script Source...");
-        await client.callTool({ name: "godot_script_source", arguments: { script_path: "res://scripts/test_node.gd" } });
+        // godot_script_source removed (agents can read files directly)
 
         // 6. Cleanup Node
         console.log("[Test] Deleting Node...");

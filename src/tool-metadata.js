@@ -9,7 +9,7 @@
 // DAP Connection Management Tools
 const dapConnectTool = {
   name: "godot_dap_connect",
-  description: "[DAP/Debugger] Connect to Godot's Debug Adapter Protocol server to enable runtime debugging operations like breakpoints, stepping, and variable inspection. Must be called before using any debug tools. Requires game to be running with --debug flag.",
+  description: "Connect to DAP for runtime debugging (breakpoints, stepping). Call before setting breakpoints.",
   category: "connection",
   protocol: "dap",
   tags: ["connect", "setup", "initialize", "session", "debugging"],
@@ -31,23 +31,12 @@ const dapConnectTool = {
   }
 };
 
-const dapDisconnectTool = {
-  name: "godot_dap_disconnect",
-  description: "[DAP/Debugger] Disconnect from Godot's Debug Adapter Protocol server and clean up the debug session.",
-  category: "connection",
-  protocol: "dap",
-  tags: ["disconnect", "cleanup", "session"],
-  visibility: "always",
-  inputSchema: {
-    type: "object",
-    properties: {}
-  }
-};
+// dapDisconnectTool removed (cleanup happens via terminate)
 
 // LSP Connection Management Tools
 const lspConnectTool = {
   name: "godot_lsp_connect",
-  description: "[LSP/Language Server] Connect to Godot's Language Server Protocol server to enable code intelligence features like autocomplete, diagnostics, go-to-definition, and symbol search. Works with editor, not running game.",
+  description: "Connect to LSP for code intelligence (autocomplete, diagnostics, go-to-definition).",
   category: "connection",
   protocol: "lsp",
   tags: ["connect", "setup", "initialize", "session", "code-intelligence"],
@@ -69,18 +58,7 @@ const lspConnectTool = {
   }
 };
 
-const lspDisconnectTool = {
-  name: "godot_lsp_disconnect",
-  description: "[LSP/Language Server] Disconnect from Godot's Language Server Protocol and clear cached diagnostics.",
-  category: "connection",
-  protocol: "lsp",
-  tags: ["disconnect", "cleanup", "session"],
-  visibility: "always",
-  inputSchema: {
-    type: "object",
-    properties: {}
-  }
-};
+// lspDisconnectTool removed (cleanup happens via terminate)
 
 // DAP Debugging - State Inspection
 // DAP Debugging - State Inspection (Removed unreliable DAP inspection tools in favor of Editor Bridge)
@@ -89,7 +67,7 @@ const lspDisconnectTool = {
 // DAP Debugging - Breakpoints
 const dapSetBreakpointTool = {
   name: "godot_dap_set_breakpoint",
-  description: "[DAP/Debugger] Set a breakpoint at a specific line in a GDScript file. Execution will pause when this line is reached during runtime debugging. IMPORTANT: Use full filesystem paths (from godot_lsp_find_definition or similar), NOT res:// paths.",
+  description: "Set a breakpoint at a line. Use full filesystem paths, not res:// paths.",
   category: "dap-debugging",
   protocol: "dap",
   tags: ["breakpoint", "debug", "conditional", "stop", "pause"],
@@ -126,7 +104,7 @@ const dapSetBreakpointTool = {
 
 const dapClearBreakpointsTool = {
   name: "godot_dap_clear_breakpoints",
-  description: "[DAP/Debugger] Remove all breakpoints from a specific GDScript file.",
+  description: "Remove all breakpoints from a GDScript file.",
   category: "dap-debugging",
   protocol: "dap",
   tags: ["breakpoint", "debug", "clear", "remove"],
@@ -148,7 +126,7 @@ const dapClearBreakpointsTool = {
 const lspGetErrorsTool = {
   name: "godot_lsp_get_errors",
   // ... (rest of lspGetErrorsTool and subsequent LSP tools unchanged until exports) ...
-  description: "[LSP/Language Server] Get syntax errors, type errors, and warnings for GDScript files. Returns diagnostics for a specific file or all open files. Use this to find and fix code issues before running the game.",
+  description: "Get syntax errors and warnings for GDScript files.",
   category: "lsp-code-intelligence",
   protocol: "lsp",
   tags: ["errors", "diagnostics", "warnings", "syntax", "type-check", "issues"],
@@ -180,7 +158,7 @@ const lspGetErrorsTool = {
 // LSP Code Intelligence - Navigation
 const lspGetSymbolInfoTool = {
   name: "godot_lsp_get_symbol_info",
-  description: "[LSP/Language Server] Get documentation, type information, and usage details for a symbol (function, class, variable) at a cursor position. Equivalent to hovering in an IDE.",
+  description: "Get documentation and type info for a symbol at cursor position.",
   category: "lsp-code-intelligence",
   protocol: "lsp",
   tags: ["hover", "symbol", "documentation", "type", "info", "definition"],
@@ -218,7 +196,7 @@ const lspGetSymbolInfoTool = {
 
 const lspFindDefinitionTool = {
   name: "godot_lsp_find_definition",
-  description: "[LSP/Language Server] Find where a symbol (function, class, variable) is defined. Returns the file location and line number of the definition.",
+  description: "Find where a symbol is defined. Returns file location and line number.",
   category: "lsp-code-intelligence",
   protocol: "lsp",
   tags: ["definition", "navigation", "goto", "find", "symbol", "reference"],
@@ -257,7 +235,7 @@ const lspFindDefinitionTool = {
 // LSP Code Intelligence - Completion
 const lspAutocompleteTool = {
   name: "godot_lsp_autocomplete",
-  description: "[LSP/Language Server] Get code completion suggestions at a cursor position. Returns available methods, properties, classes, and keywords that can be used at that location.",
+  description: "Get code completion suggestions at cursor position.",
   category: "lsp-code-intelligence",
   protocol: "lsp",
   tags: ["autocomplete", "completion", "suggestions", "intellisense", "help"],
@@ -296,7 +274,7 @@ const lspAutocompleteTool = {
 // LSP Code Intelligence - Symbols
 const lspListSymbolsTool = {
   name: "godot_lsp_list_symbols",
-  description: "[LSP/Language Server] List all symbols (functions, classes, variables, signals, etc.) defined in a GDScript file. Useful for understanding file structure.",
+  description: "List all symbols (functions, classes, variables) in a file.",
   category: "lsp-code-intelligence",
   protocol: "lsp",
   tags: ["symbols", "list", "structure", "outline", "file"],
@@ -316,7 +294,7 @@ const lspListSymbolsTool = {
 
 const lspSearchSymbolsTool = {
   name: "godot_lsp_search_symbols",
-  description: "[LSP/Language Server] Search for symbols (functions, classes, variables) across the entire Godot project by name. Returns matching symbols with their locations.",
+  description: "Search for symbols across the project by name.",
   category: "lsp-code-intelligence",
   protocol: "lsp",
   tags: ["symbols", "search", "find", "workspace", "project"],
@@ -338,8 +316,7 @@ const lspSearchSymbolsTool = {
 
 const dapConfigurationDoneTool = {
   name: "godot_dap_configuration_done",
-  description: `This is a tool from the godot MCP server.
-[DAP/Debugger] Signal that configuration (breakpoints) is done. Required to statrt receiving 'stopped' events.`,
+  description: "Signal that breakpoint configuration is done. Required before receiving stop events.",
   inputSchema: {
     type: "object",
     properties: {
@@ -353,8 +330,7 @@ const dapConfigurationDoneTool = {
 
 const debuggerSessionsTool = {
   name: "godot_debugger_sessions",
-  description: `This is a tool from the godot MCP server.
-Get information about active debugger sessions via Editor Bridge (alternative to DAP). Returns session ID, paused state, and debug capabilities.`,
+  description: "Get active debugger sessions. Returns paused state and session info.",
   inputSchema: {
     type: "object",
     properties: {
@@ -368,8 +344,7 @@ Get information about active debugger sessions via Editor Bridge (alternative to
 
 const debuggerResumeTool = {
   name: "godot_debugger_resume",
-  description: `This is a tool from the godot MCP server.
-Resume execution of a paused debugger session via Editor Bridge.`,
+  description: "Resume execution of a paused debugger session.",
   inputSchema: {
     type: "object",
     properties: {
@@ -381,8 +356,7 @@ Resume execution of a paused debugger session via Editor Bridge.`,
 
 const debuggerStepOverTool = {
   name: "godot_debugger_step_over",
-  description: `This is a tool from the godot MCP server.
-Step over the current line in a paused debugger session via Editor Bridge.`,
+  description: "Step over the current line in a paused session.",
   inputSchema: {
     type: "object",
     properties: {
@@ -395,10 +369,8 @@ Step over the current line in a paused debugger session via Editor Bridge.`,
 // Export all tools
 export const allTools = [
   dapConnectTool,
-  dapDisconnectTool,
   dapConfigurationDoneTool,
   lspConnectTool,
-  lspDisconnectTool,
   dapSetBreakpointTool,
   dapClearBreakpointsTool,
   debuggerSessionsTool,
@@ -414,10 +386,8 @@ export const allTools = [
 
 export const connectionTools = [
   dapConnectTool,
-  dapDisconnectTool,
   dapConfigurationDoneTool,
-  lspConnectTool,
-  lspDisconnectTool
+  lspConnectTool
 ];
 
 export const dapTools = [

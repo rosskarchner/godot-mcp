@@ -167,7 +167,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         case 'godot_node_create': result = await editor.createNode(args.parent_path, args.node_type, args.node_name); break;
         case 'godot_node_delete': result = await editor.deleteNode(args.node_path); break;
         case 'godot_script_attach': result = await editor.attachScript(args.node_path, args.script_path); break;
-        case 'godot_script_source': result = await editor.getScriptSource(args.script_path); break;
+        // godot_script_source removed (agents can read files directly)
         case 'godot_resources_list': result = await editor.listResources(args.directory, args.filter); break;
         case 'godot_project_settings_list': result = await editor.listProjectSettings(args.prefix);
         // DAP Debugging
@@ -251,9 +251,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         await dap.connect();
         await dap.sendRequest('attach', {});
         return success('Connected and Attached to DAP');
-      } else if (name === 'godot_dap_disconnect') {
-        dap.disconnect();
-        return success('Disconnected from DAP');
       } else {
         // Forward request to DAP client
         // We need to map tool name to command name
@@ -296,9 +293,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         await lsp.connect();
         // Manually init? client.connect() does initialize
         return success('Connected to LSP');
-      } else if (name === 'godot_lsp_disconnect') {
-        lsp.disconnect();
-        return success('Disconnected from LSP');
       }
 
       switch (name) {

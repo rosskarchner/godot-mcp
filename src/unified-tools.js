@@ -16,7 +16,7 @@ function withInstanceId(tool) {
 const instanceTools = [
     {
         name: 'godot_launch',
-        description: 'Launch a new Godot editor instance for a project. Automatically injects MCP support and configures unique ports.',
+        description: 'Launch a Godot editor instance. Auto-injects MCP support.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -29,12 +29,12 @@ const instanceTools = [
     },
     {
         name: 'godot_list_instances',
-        description: 'List all running Godot editor instances managed by this MCP server',
+        description: 'List all running Godot instances.',
         inputSchema: { type: 'object', properties: {} }
     },
     {
         name: 'godot_terminate',
-        description: 'Terminate a running Godot editor instance',
+        description: 'Terminate a Godot editor instance.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -45,7 +45,7 @@ const instanceTools = [
     },
     {
         name: 'godot_switch_instance',
-        description: 'Switch the active instance for subsequent tool calls',
+        description: 'Switch the active instance for tool calls.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -56,7 +56,7 @@ const instanceTools = [
     },
     {
         name: 'godot_adopt_instance',
-        description: 'Interact with a Godot instance that was started externally (manually). Requires the MCP bridge plugin to be enabled in the project.',
+        description: 'Connect to an externally started Godot (requires MCP plugin).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -174,17 +174,7 @@ const editorTools = [
             required: ['node_path', 'script_path']
         }
     },
-    {
-        name: 'godot_script_source',
-        description: 'Get source code of a script',
-        inputSchema: {
-            type: 'object',
-            properties: {
-                script_path: { type: 'string' }
-            },
-            required: ['script_path']
-        }
-    },
+    // godot_script_source removed (agents can read files directly)
     {
         name: 'godot_resources_list',
         description: 'List resources in project directory',

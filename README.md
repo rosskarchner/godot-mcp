@@ -1,65 +1,108 @@
-# Godot DAP/LSP MCP Server
+# Godot Unified MCP Server
 
-MCP server for **runtime debugging** and **code intelligence** with Godot Engine. Connects to Godot's Debug Adapter Protocol (DAP) and Language Server Protocol (LSP) for AI-assisted development.
+A powerful **Model Context Protocol (MCP)** server that connects AI agents directly to the **Godot Engine**. It unifies four distinct capabilities into a single interface:
 
-> **Note**: This server provides DAP/LSP debugging and code intelligence. For editor manipulation (scene/node management), use [godot-mcp-plugin](https://github.com/rosskarchner/godot-mcp-plugin).
+1.  **Editor Control**: Manipulate scenes, nodes, scripts, and resources directly in the editor.
+2.  **Game Interaction**: Interact with the running game (screenshots, input simulation, runtime scene tree).
+3.  **Debugging (DAP)**: Set breakpoints, inspect variables, and step through code.
+4.  **Code Intelligence (LSP)**: Autocomplete, go-to-definition, and symbol search.
 
-You may also be interested in:
-- [A different (somewhat overlapping) Godot MCP implementation](https://github.com/Coding-Solo/godot-mcp)
-- [An MCP server that runs as a Godot Engine plugin](https://github.com/rosskarchner/godot-mcp-plugin)
+## Features
 
-## Quick Start
-
-```bash
-npm install
-node src/index.js
-```
-
-Configure via environment variables if needed:
-```bash
-GODOT_DEBUG_HOST=127.0.0.1 GODOT_DEBUG_PORT=6006 node src/index.js
-```
+*   **Zero-Config Injection**: Automatically injects the necessary bridge plugin into your Godot project when you launch it via this server. No manual addon installation required.
+*   **Instance Management**: Launch, monitor, and control multiple Godot Editor instances simultaneously.
+*   **Port Isolation**: Automatically manages ports for LSP, DAP, and HTTP bridges for each instance to prevent conflicts.
+*   **Resilience**: Restores sessions after server restart and handles external process monitoring.
+*   **Context-Aware**: Tools can target specific instances or default to the active one.
 
 ## Prerequisites
 
-- Godot Engine running with debugging/LSP enabled
-- Godot exposes two ports:
-  - **DAP (debugging)**: Port 6006 (default) - for runtime debugging
-  - **LSP (code intelligence)**: Port 6005 (default) - for code analysis
+*   **Node.js** (v18 or higher)
+*   **Godot Engine (4.x)** installed and available in your system PATH (or provide absolute path during launch).
 
-## Available Tools
+## Installation
 
-### DAP - Debug Adapter Protocol (Runtime Debugging)
+1.  Clone this repository:
+    ```bash
+    git clone <repo-url>
+    cd godot-mcp-unified
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Build (optional, if using TypeScript source later, currently strictly JS):
+    ```bash
+    # No build step required for current JS version
+    ```
 
-All tools prefixed with `godot_dap_` - for debugging **running games**:
+## Configuration (Claude Desktop)
 
-- **Connection**: `godot_dap_connect`, `godot_dap_disconnect`
-- **Execution Control**: `godot_dap_pause`, `godot_dap_continue`, `godot_dap_step_over`, `godot_dap_step_into`, `godot_dap_step_out`
-- **Inspection**: `godot_dap_list_threads`, `godot_dap_get_stacktrace`, `godot_dap_get_scopes`, `godot_dap_inspect_variables`
-- **Breakpoints**: `godot_dap_set_breakpoint`, `godot_dap_clear_breakpoints`
+Add the server to your `claude_desktop_config.json`:
 
-### LSP - Language Server Protocol (Code Intelligence)
+```json
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/absolute/path/to/godot-mcp-unified/src/index.js"]
+    }
+  }
+}
+```
 
-All tools prefixed with `godot_lsp_` - for **static code analysis**:
+## Usage
 
-- **Connection**: `godot_lsp_connect`, `godot_lsp_disconnect`
-- **Diagnostics**: `godot_lsp_get_errors`
-- **Navigation**: `godot_lsp_get_symbol_info`, `godot_lsp_find_definition`
-- **Completion**: `godot_lsp_autocomplete`
-- **Symbols**: `godot_lsp_list_symbols`, `godot_lsp_search_symbols`
+Once connected to your agent (e.g. Claude):
 
-## Tool Naming Convention
+1.  **Launch a Project**:
+    > "Launch Godot for the project at /home/user/my_game"
+    
+    The server will:
+    *   Inject the `godot_mcp_bridge` addon into the project.
+    *   Configure `project.godot` to enable the plugin and autoloads.
+    *   Spawn the Godot Editor process with dedicated ports.
 
-- `godot_dap_*` - Runtime debugging via Debug Adapter Protocol
-- `godot_lsp_*` - Code intelligence via Language Server Protocol
-- For editor manipulation (scenes, nodes, properties), use the separate [godot-mcp-plugin](https://github.com/rosskarchner/godot-mcp-plugin)
+2.  **Interact with the Editor**:
+    > "Get the scene tree for the current scene"
+    > "Attach a script to the Player node"
+    
+3.  **Play & Test**:
+    > "Start the game"
+    > "Wait 5 seconds and take a screenshot"
+    
+4.  **Debug**:
+    > "Set a breakpoint in player.gd at line 10"
+    > "Inspect local variables"
 
-## Environment Variables
+## Tool Categories
 
-- `GODOT_DEBUG_HOST`: DAP host (default: `127.0.0.1`)
-- `GODOT_DEBUG_PORT`: DAP port (default: `6006`)
-- `GODOT_LSP_HOST`: LSP host (default: `127.0.0.1`)
-- `GODOT_LSP_PORT`: LSP port (default: `6005`)
+### Instance Management
+*   `godot_launch`: Start a new editor instance.
+*   `godot_list_instances`: See running projects.
+*   `godot_switch_instance`: Switch active focus.
+*   `godot_terminate`: Close an instance.
+*   `godot_adopt_instance`: Connect to an externally launched Godot (requires plugin already present).
+
+### Editor Tools (`godot_scene_*`, `godot_node_*`, etc.)
+*   Manage scenes (load, save, get tree).
+*   Manage nodes (create, delete, rename, properties).
+*   manage scripts (attach, read source).
+*   Project settings & resources.
+
+### Game Bridge (`godot_game_*`)
+*   `godot_game_play` / `stop`: Control game execution from editor.
+*   `godot_game_screenshot`: Capture game view (saves to disk to preserve context).
+*   `godot_game_scene_tree`: Inspect runtime node hierarchy.
+*   `godot_game_send_input`: Simulate mouse/keyboard/joypad events.
+
+### Debugging & LSP (`godot_dap_*`, `godot_lsp_*`)
+*   Standard protocol implementations for debugging and code intelligence.
+
+## Troubleshooting
+
+*   **Large Screenshots**: Screenshots are automatically saved to disk (`./screenshot_*.png`) and the path is returned to the agent to avoid overflowing the context window.
+*   **Ports**: The server uses ports starting at 6005 (LSP), 6006 (DAP), 8765 (Editor), 8766 (Game) and increments by 10 for each new instance. Ensure these ports are free.
 
 ## License
 

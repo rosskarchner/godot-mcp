@@ -20,3 +20,9 @@ func get_test_data() -> Dictionary:
 		"string": test_string,
 		"active": is_active
 	}
+
+func _input(event):
+	print("Input received: ", event)
+	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+		print("Space pressed!")
+		test_method()

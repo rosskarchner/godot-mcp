@@ -16,8 +16,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-MCPGameBridge="res://addons/mcp_server/runtime/mcp_game_bridge.gd"
+MCPGameBridge="*res://addons/godot_mcp_bridge/runtime/game_bridge.gd"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/mcp_server/plugin.cfg")
+enabled=PackedStringArray("res://addons/godot_mcp_bridge/plugin.cfg")

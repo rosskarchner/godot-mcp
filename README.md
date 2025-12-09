@@ -69,7 +69,8 @@ Once connected to your agent (e.g. Claude):
     
 4.  **Debug**:
     > "Set a breakpoint in player.gd at line 10"
-    > "Inspect local variables"
+    > "Resume execution"
+    > "Step over current line"
 
 ## Tool Categories
 

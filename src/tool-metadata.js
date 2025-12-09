@@ -83,114 +83,13 @@ const lspDisconnectTool = {
 };
 
 // DAP Debugging - State Inspection
-const dapListThreadsTool = {
-  name: "godot_dap_list_threads",
-  description: "[DAP/Debugger] List all running threads in the Godot game during runtime debugging. Use this to identify which thread to debug when setting breakpoints or stepping through code.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["threads", "debug", "state", "inspect"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_connect"],
-  inputSchema: {
-    type: "object",
-    properties: {}
-  }
-};
-
-const dapGetStacktraceTool = {
-  name: "godot_dap_get_stacktrace",
-  description: "[DAP/Debugger] Get the current call stack for a thread during runtime debugging, showing which functions are executing and their file locations. Essential for understanding program flow and getting file paths for breakpoints.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["stacktrace", "stack", "debug", "inspect", "state", "frames"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_connect", "godot_dap_list_threads"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      threadId: {
-        type: "number",
-        description: "The thread ID to get the stack trace for (obtain from godot_dap_list_threads)"
-      }
-    },
-    required: ["threadId"]
-  },
-  examples: [
-    {
-      description: "Get stack trace for the main thread (common thread ID)",
-      input: {
-        threadId: 1
-      }
-    },
-    {
-      description: "Get stack trace to understand current execution point and get filesystem paths for breakpoints",
-      input: {
-        threadId: 1
-      },
-      note: "The returned stack frames contain source.path (filesystem paths) needed for godot_dap_set_breakpoint"
-    }
-  ]
-};
-
-const dapGetScopesTool = {
-  name: "godot_dap_get_scopes",
-  description: "[DAP/Debugger] Get available variable scopes (local, global, etc.) for a stack frame during runtime debugging. Use this to find the variablesReference needed to inspect variables.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["scopes", "variables", "inspect", "locals", "globals"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_get_stacktrace"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      frameId: {
-        type: "number",
-        description: "The stack frame ID from godot_dap_get_stacktrace"
-      }
-    },
-    required: ["frameId"]
-  }
-};
-
-const dapInspectVariablesTool = {
-  name: "godot_dap_inspect_variables",
-  description: "[DAP/Debugger] Inspect variables in a specific scope (local, global, etc.) during runtime debugging. Shows variable names, values, and types. Use the variablesReference from godot_dap_get_scopes.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["variables", "inspect", "values", "types", "locals", "globals"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_get_scopes"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      variablesReference: {
-        type: "number",
-        description: "The variables reference ID from godot_dap_get_scopes or from a parent variable with children"
-      }
-    },
-    required: ["variablesReference"]
-  },
-  examples: [
-    {
-      description: "Inspect local scope variables from godot_dap_get_scopes",
-      input: {
-        variablesReference: 1
-      }
-    },
-    {
-      description: "Inspect nested object properties (variablesReference from parent variable)",
-      input: {
-        variablesReference: 42
-      },
-      note: "variablesReference comes from inspecting parent variable's children"
-    }
-  ]
-};
+// DAP Debugging - State Inspection (Removed unreliable DAP inspection tools in favor of Editor Bridge)
+// The following tools were removed: list_threads, get_stacktrace, get_scopes, inspect_variables
 
 // DAP Debugging - Breakpoints
 const dapSetBreakpointTool = {
   name: "godot_dap_set_breakpoint",
-  description: "[DAP/Debugger] Set a breakpoint at a specific line in a GDScript file. Execution will pause when this line is reached during runtime debugging. IMPORTANT: Use full filesystem paths (from godot_dap_get_stacktrace), NOT res:// paths.",
+  description: "[DAP/Debugger] Set a breakpoint at a specific line in a GDScript file. Execution will pause when this line is reached during runtime debugging. IMPORTANT: Use full filesystem paths (from godot_lsp_find_definition or similar), NOT res:// paths.",
   category: "dap-debugging",
   protocol: "dap",
   tags: ["breakpoint", "debug", "conditional", "stop", "pause"],
@@ -201,7 +100,7 @@ const dapSetBreakpointTool = {
     properties: {
       source: {
         type: "string",
-        description: "Full filesystem path to the GDScript file (e.g., '/home/user/project/scripts/player.gd'). Get correct paths from godot_dap_get_stacktrace."
+        description: "Full filesystem path to the GDScript file (e.g., '/home/user/project/scripts/player.gd')."
       },
       line: {
         type: "number",
@@ -220,23 +119,6 @@ const dapSetBreakpointTool = {
       input: {
         source: "/home/user/godot-project/scripts/player.gd",
         line: 25
-      }
-    },
-    {
-      description: "Conditional breakpoint that breaks when player health is critical",
-      input: {
-        source: "/home/user/godot-project/scripts/player.gd",
-        line: 42,
-        condition: "health <= 10"
-      },
-      note: "Condition uses GDScript syntax; breakpoint only pauses when condition is true"
-    },
-    {
-      description: "Conditional breakpoint with complex expression",
-      input: {
-        source: "/home/user/godot-project/scripts/enemy.gd",
-        line: 89,
-        condition: "state == 'attacking' and target != null"
       }
     }
   ]
@@ -262,109 +144,10 @@ const dapClearBreakpointsTool = {
   }
 };
 
-// DAP Debugging - Execution Control
-const dapPauseTool = {
-  name: "godot_dap_pause",
-  description: "[DAP/Debugger] Pause execution of the running Godot game immediately during runtime debugging. Use this to freeze the game and inspect its current state.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["pause", "freeze", "execution", "control", "stop"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_connect"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      threadId: {
-        type: "number",
-        description: "Optional: specific thread ID to pause (if not specified, pauses all threads)"
-      }
-    }
-  }
-};
-
-const dapContinueTool = {
-  name: "godot_dap_continue",
-  description: "[DAP/Debugger] Resume execution after the game has been paused (by breakpoint or manual pause) during runtime debugging. The game will run until the next breakpoint or pause.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["continue", "resume", "execution", "control", "run"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_connect"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      threadId: {
-        type: "number",
-        description: "The thread ID to resume execution (from godot_dap_list_threads)"
-      }
-    },
-    required: ["threadId"]
-  }
-};
-
-const dapStepOverTool = {
-  name: "godot_dap_step_over",
-  description: "[DAP/Debugger] Execute the current line and move to the next line during runtime debugging, stepping OVER any function calls (don't enter them). Use for quick debugging without diving into functions.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["step", "stepping", "step-over", "next", "execution", "control"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_connect"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      threadId: {
-        type: "number",
-        description: "The thread ID to step (from godot_dap_list_threads)"
-      }
-    },
-    required: ["threadId"]
-  }
-};
-
-const dapStepIntoTool = {
-  name: "godot_dap_step_into",
-  description: "[DAP/Debugger] Execute the current line and step INTO any function calls during runtime debugging to debug them line-by-line. Use when you want to examine what happens inside a function.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["step", "stepping", "step-into", "function", "execution", "control"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_connect"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      threadId: {
-        type: "number",
-        description: "The thread ID to step (from godot_dap_list_threads)"
-      }
-    },
-    required: ["threadId"]
-  }
-};
-
-const dapStepOutTool = {
-  name: "godot_dap_step_out",
-  description: "[DAP/Debugger] Complete execution of the current function and return to the caller during runtime debugging. Use to quickly exit a function you've stepped into.",
-  category: "dap-debugging",
-  protocol: "dap",
-  tags: ["step", "stepping", "step-out", "return", "execution", "control"],
-  visibility: "deferred",
-  dependencies: ["godot_dap_connect"],
-  inputSchema: {
-    type: "object",
-    properties: {
-      threadId: {
-        type: "number",
-        description: "The thread ID to step out (from godot_dap_list_threads)"
-      }
-    },
-    required: ["threadId"]
-  }
-};
-
-// LSP Code Intelligence - Diagnostics
+// ... existing LSP tools ...
 const lspGetErrorsTool = {
   name: "godot_lsp_get_errors",
+  // ... (rest of lspGetErrorsTool and subsequent LSP tools unchanged until exports) ...
   description: "[LSP/Language Server] Get syntax errors, type errors, and warnings for GDScript files. Returns diagnostics for a specific file or all open files. Use this to find and fix code issues before running the game.",
   category: "lsp-code-intelligence",
   protocol: "lsp",
@@ -428,15 +211,6 @@ const lspGetSymbolInfoTool = {
         uri: "file:///home/user/project/scripts/main.gd",
         line: 15,
         character: 5
-      },
-      note: "Character position should be within the symbol name"
-    },
-    {
-      description: "Get information about a class property",
-      input: {
-        uri: "file:///home/user/project/scripts/player.gd",
-        line: 42,
-        character: 12
       }
     }
   ]
@@ -476,15 +250,6 @@ const lspFindDefinitionTool = {
         line: 15,
         character: 8
       }
-    },
-    {
-      description: "Find definition of a class property",
-      input: {
-        uri: "file:///home/user/project/scripts/player.gd",
-        line: 42,
-        character: 12
-      },
-      note: "Character position must be within the symbol name for accurate definition lookup"
     }
   ]
 };
@@ -523,17 +288,7 @@ const lspAutocompleteTool = {
         uri: "file:///home/user/project/scripts/player.gd",
         line: 25,
         character: 18
-      },
-      context: "position.| <- cursor position at character 18"
-    },
-    {
-      description: "Get completions while typing method name",
-      input: {
-        uri: "file:///home/user/project/scripts/player.gd",
-        line: 30,
-        character: 9
-      },
-      context: "func get_| <- cursor in middle of typing, returns completions for 'get' prefix"
+      }
     }
   ]
 };
@@ -579,23 +334,76 @@ const lspSearchSymbolsTool = {
   }
 };
 
+// godot_dap_attach removed (merged into connect)
+
+const dapConfigurationDoneTool = {
+  name: "godot_dap_configuration_done",
+  description: `This is a tool from the godot MCP server.
+[DAP/Debugger] Signal that configuration (breakpoints) is done. Required to statrt receiving 'stopped' events.`,
+  inputSchema: {
+    type: "object",
+    properties: {
+      instance_id: {
+        type: "string",
+        description: "Optional: ID of the Godot instance to target (default: active instance)"
+      }
+    }
+  }
+};
+
+const debuggerSessionsTool = {
+  name: "godot_debugger_sessions",
+  description: `This is a tool from the godot MCP server.
+Get information about active debugger sessions via Editor Bridge (alternative to DAP). Returns session ID, paused state, and debug capabilities.`,
+  inputSchema: {
+    type: "object",
+    properties: {
+      instance_id: {
+        type: "string",
+        description: "Optional: ID of the Godot instance to target (default: active instance)"
+      }
+    }
+  }
+};
+
+const debuggerResumeTool = {
+  name: "godot_debugger_resume",
+  description: `This is a tool from the godot MCP server.
+Resume execution of a paused debugger session via Editor Bridge.`,
+  inputSchema: {
+    type: "object",
+    properties: {
+      instance_id: { type: "string" },
+      session_id: { type: "integer", default: 0 }
+    }
+  }
+};
+
+const debuggerStepOverTool = {
+  name: "godot_debugger_step_over",
+  description: `This is a tool from the godot MCP server.
+Step over the current line in a paused debugger session via Editor Bridge.`,
+  inputSchema: {
+    type: "object",
+    properties: {
+      instance_id: { type: "string" },
+      session_id: { type: "integer", default: 0 }
+    }
+  }
+};
+
 // Export all tools
 export const allTools = [
   dapConnectTool,
   dapDisconnectTool,
+  dapConfigurationDoneTool,
   lspConnectTool,
   lspDisconnectTool,
-  dapListThreadsTool,
-  dapGetStacktraceTool,
-  dapGetScopesTool,
-  dapInspectVariablesTool,
   dapSetBreakpointTool,
   dapClearBreakpointsTool,
-  dapPauseTool,
-  dapContinueTool,
-  dapStepOverTool,
-  dapStepIntoTool,
-  dapStepOutTool,
+  debuggerSessionsTool,
+  debuggerResumeTool,
+  debuggerStepOverTool,
   lspGetErrorsTool,
   lspGetSymbolInfoTool,
   lspFindDefinitionTool,
@@ -607,22 +415,18 @@ export const allTools = [
 export const connectionTools = [
   dapConnectTool,
   dapDisconnectTool,
+  dapConfigurationDoneTool,
   lspConnectTool,
   lspDisconnectTool
 ];
 
 export const dapTools = [
-  dapListThreadsTool,
-  dapGetStacktraceTool,
-  dapGetScopesTool,
-  dapInspectVariablesTool,
   dapSetBreakpointTool,
   dapClearBreakpointsTool,
-  dapPauseTool,
-  dapContinueTool,
-  dapStepOverTool,
-  dapStepIntoTool,
-  dapStepOutTool
+  dapConfigurationDoneTool,
+  debuggerSessionsTool,
+  debuggerResumeTool,
+  debuggerStepOverTool
 ];
 
 export const lspTools = [
@@ -633,6 +437,8 @@ export const lspTools = [
   lspListSymbolsTool,
   lspSearchSymbolsTool
 ];
+
+
 
 export const alwaysVisibleTools = [
   ...connectionTools

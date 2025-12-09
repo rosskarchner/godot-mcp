@@ -1,2 +1,3 @@
 # Plugin will be installed via setup_example.sh
 addons/
+!addons/godot_mcp_bridge/

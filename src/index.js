@@ -82,9 +82,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'godot_launch') {
       const instance = await instanceManager.launchInstance(
         args.project_path,
-        { godotPath: args.godot_path, waitForReady: args.wait_for_ready }
+        {
+          godotPath: args.godot_path,
+          waitForReady: args.wait_for_ready,
+          headless: args.headless
+        }
       );
       activeInstanceId = instance.id;
+
+      if (args.wait_for_ready) {
+        console.error(`[MCP] Waiting for instance ${instance.id} to be ready...`);
+        const { editor } = getClients(instance.id);
+        const startTime = Date.now();
+        const timeout = 60000; // 60s timeout
+
+        let ready = false;
+        while (Date.now() - startTime < timeout) {
+          if (await editor.healthCheck()) {
+            ready = true;
+            break;
+          }
+          await new Promise(r => setTimeout(r, 1000));
+        }
+
+        if (!ready) {
+          throw new Error("Timeout waiting for Godot instance to be ready");
+        }
+        console.error(`[MCP] Instance ${instance.id} is ready.`);
+      }
+
       return success(`Launched Godot for ${args.project_path} (ID: ${instance.id})`, {
         instance_id: instance.id,
         ports: instance.ports
@@ -143,9 +169,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         case 'godot_script_attach': result = await editor.attachScript(args.node_path, args.script_path); break;
         case 'godot_script_source': result = await editor.getScriptSource(args.script_path); break;
         case 'godot_resources_list': result = await editor.listResources(args.directory, args.filter); break;
-        case 'godot_project_settings_list': result = await editor.listProjectSettings(args.prefix); break;
-        case 'godot_project_setting_get': result = await editor.getProjectSetting(args.setting_name); break;
-        case 'godot_project_setting_set': result = await editor.setProjectSetting(args.setting_name, args.value); break;
+        case 'godot_project_settings_list': result = await editor.listProjectSettings(args.prefix);
+        // DAP Debugging
+        case 'godot_dap_attach':
+          result = await editor.dapAttach(args.instance_id);
+          break;
+        case 'godot_dap_configuration_done':
+          result = await editor.dapConfigurationDone(args.instance_id);
+          break;
+        case 'godot_dap_set_breakpoint':
+          result = await editor.dapSetBreakpoint(args.source, args.line, args.condition, args.instance_id);
+          break;
+        case 'godot_dap_clear_breakpoints':
+          result = await editor.dapClearBreakpoints(args.source, args.instance_id);
+          break;
+
+        // Editor Bridge Debugging (Preferred over DAP Flow Control)
+        case 'godot_debugger_sessions':
+          result = await editor.getDebuggerSessions();
+          break;
+        case 'godot_debugger_resume':
+          result = await editor.debugResume(args.session_id);
+          break;
+        case 'godot_debugger_step_over':
+          result = await editor.debugStepOver(args.session_id);
+          break;
         case 'godot_script_get': result = await editor.getNodeScript(args.node_path); break;
         case 'godot_input_actions_list': result = await editor.listInputActions(); break;
         case 'godot_editor_output': result = await editor.readEditorLogs(args.max_lines, args.filter_text); break;
@@ -155,7 +203,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     // === Game Bridge Tools ===
-    if (name.startsWith('godot_game_')) {
+    if (name.startsWith('godot_game_') || name === 'godot_debugger_sessions') {
       const { game, editor } = getClients(args.instance_id); // Need editor for play/stop
       let result;
 
@@ -173,12 +221,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             saveToDisk: args.save_to_disk
           });
           break;
+        case 'godot_debugger_sessions':
+          result = await editor.getDebuggerSessions();
+          break;
+        case 'godot_debugger_resume':
+          result = await editor.debugResume(args.session_id);
+          break;
+        case 'godot_debugger_step_over':
+          result = await editor.debugStepOver(args.session_id);
+          break;
         case 'godot_game_scene_tree':
           result = await game.getSceneTree(args.max_depth);
           break;
-        case 'godot_game_send_input':
-          result = await game.sendInput(args);
-          break;
+        // godot_game_send_input removed (use godot_game_send_sequence)
         case 'godot_game_send_sequence':
           result = await game.sendInputSequence(args.sequence, args.capture_screenshot);
           break;
@@ -194,7 +249,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       if (name === 'godot_dap_connect') {
         await dap.connect();
-        return success('Connected to DAP');
+        await dap.sendRequest('attach', {});
+        return success('Connected and Attached to DAP');
       } else if (name === 'godot_dap_disconnect') {
         dap.disconnect();
         return success('Disconnected from DAP');
@@ -211,6 +267,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         // For simplicity, I will implement specific handlers for common tools
         switch (name) {
+          // godot_dap_attach case removed (merged into connect)
+          case 'godot_dap_configuration_done': result = await dap.sendRequest('configurationDone', {}); break;
           case 'godot_dap_set_breakpoint':
             // DAP expects 'setBreakpoints', logic is complex (needs source object)
             await dap.sendRequest('setBreakpoints', {
@@ -220,15 +278,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             result = "Breakpoint set";
             // For more complete implementation we'd need to properly handle response
             break;
-          case 'godot_dap_continue': await dap.sendRequest('continue', { threadId: args.threadId }); result = "Continued"; break;
-          case 'godot_dap_pause': await dap.sendRequest('pause', { threadId: args.threadId }); result = "Paused"; break;
-          case 'godot_dap_step_over': await dap.sendRequest('next', { threadId: args.threadId }); result = "Step Over"; break; // 'next' is step over in DAP
-          case 'godot_dap_step_into': await dap.sendRequest('stepIn', { threadId: args.threadId }); result = "Step Into"; break;
-          case 'godot_dap_step_out': await dap.sendRequest('stepOut', { threadId: args.threadId }); result = "Step Out"; break;
-          case 'godot_dap_list_threads': result = await dap.sendRequest('threads'); break;
-          case 'godot_dap_get_stacktrace': result = await dap.sendRequest('stackTrace', { threadId: args.threadId }); break;
-          case 'godot_dap_get_scopes': result = await dap.sendRequest('scopes', { frameId: args.frameId }); break;
-          case 'godot_dap_inspect_variables': result = await dap.sendRequest('variables', { variablesReference: args.variablesReference }); break;
           case 'godot_dap_clear_breakpoints':
             await dap.sendRequest('setBreakpoints', { source: { path: args.source }, breakpoints: [] });
             result = "Breakpoints cleared";
@@ -254,9 +303,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       switch (name) {
         case 'godot_lsp_get_errors':
-          // Logic to get diagnostics? LSPClient has getDocumentDiagnostics(uri)
-          if (args.uri) result = lsp.getDocumentDiagnostics(args.uri);
-          else result = "Getting all diagnostics not supported yet"; // Need global cache?
+          result = await lsp.getDocumentDiagnostics(args.uri);
           break;
         case 'godot_lsp_get_symbol_info': result = await lsp.hover(args.uri, args.line, args.character); break;
         case 'godot_lsp_find_definition': result = await lsp.definition(args.uri, args.line, args.character); break;

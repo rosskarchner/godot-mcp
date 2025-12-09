@@ -45,12 +45,12 @@ export class InstanceManager extends EventEmitter {
                     };
                     this.instances.set(id, instanceInfo);
 
-                    console.log(`[InstanceManager] Restored session for ${id} (PID ${item.pid})`);
+                    console.error(`[InstanceManager] Restored session for ${id} (PID ${item.pid})`);
 
                     this.monitorExternalProcess(instanceInfo);
 
                 } catch (e) {
-                    console.log(`[InstanceManager] Discarding dead session ${id} (PID ${item.pid})`);
+                    console.error(`[InstanceManager] Discarding dead session ${id} (PID ${item.pid})`);
                 }
             }
         } catch (e) {
@@ -81,7 +81,7 @@ export class InstanceManager extends EventEmitter {
             try {
                 process.kill(instance.pid, 0);
             } catch {
-                console.log(`[InstanceManager] Restored instance ${instance.id} exited`);
+                console.error(`[InstanceManager] Restored instance ${instance.id} exited`);
                 clearInterval(interval);
                 this.instances.delete(instance.id);
                 this.saveState();
@@ -148,7 +148,7 @@ export class InstanceManager extends EventEmitter {
 
         const instanceId = projectPath;
         const ports = this.allocatePorts();
-        console.log(`[InstanceManager] Launching '${path.basename(projectPath)}' (${projectPath}) on ports:`, ports);
+        console.error(`[InstanceManager] Launching '${path.basename(projectPath)}' (${projectPath}) on ports:`, ports);
 
         await this.injectMCPSupport(projectPath, ports);
 
@@ -160,20 +160,34 @@ export class InstanceManager extends EventEmitter {
             `--language-server-port=${ports.lsp}`
         ];
 
-        console.log(`[InstanceManager] Executing: ${godotPath} ${args.join(' ')}`);
+        if (options.headless) {
+            args.push('--headless');
+        }
+
+        console.error(`[InstanceManager] Executing: ${godotPath} ${args.join(' ')}`);
+
+        const fs = await import('fs');
+        const outLog = fs.openSync(path.join(projectPath, 'godot_access.log'), 'a');
+        const errLog = fs.openSync(path.join(projectPath, 'godot_error.log'), 'a');
+
+        // Ensure XDG_RUNTIME_DIR is set (critical for Wayland/Godot)
+        if (!process.env.XDG_RUNTIME_DIR) {
+            process.env.XDG_RUNTIME_DIR = '/run/user/1000';
+        }
+        console.error(`[InstanceManager] Launching with XDG_RUNTIME_DIR: ${process.env.XDG_RUNTIME_DIR}`);
 
         const childProcess = spawn(godotPath, args, {
-            detached: true,
-            stdio: 'ignore'
+            stdio: ['ignore', outLog, errLog],
+            env: process.env
         });
 
         childProcess.on('close', (code) => {
-            console.log(`[InstanceManager] Instance ${instanceId} exited with code ${code}`);
+            console.error(`[InstanceManager] Instance ${instanceId} exited with code ${code}`);
             this.instances.delete(instanceId);
             this.saveState();
         });
 
-        childProcess.unref();
+        // childProcess.unref(); // Keep attached for now to debug
 
         const instanceInfo = {
             id: instanceId,
@@ -253,7 +267,7 @@ export class InstanceManager extends EventEmitter {
 
         if (changed) {
             await fs.writeFile(projectFile, content);
-            console.log(`[InstanceManager] Updated project.godot`);
+            console.error(`[InstanceManager] Updated project.godot`);
         }
     }
 

@@ -120,6 +120,23 @@ export class EditorApiClient {
         return this.request('/editor/output', body);
     }
 
+    // Debugger operations
+    async getDebuggerSessions() {
+        return this.request('/debugger/sessions');
+    }
+
+    async debugResume(sessionId = 0) {
+        return this.request('/debugger/continue', { session_id: sessionId });
+    }
+
+    async debugStepOver(sessionId = 0) {
+        return this.request('/debugger/next', { session_id: sessionId });
+    }
+
+    async debugStepInto(sessionId = 0) {
+        return this.request('/debugger/step', { session_id: sessionId });
+    }
+
     // Health check
     async healthCheck() {
         try {

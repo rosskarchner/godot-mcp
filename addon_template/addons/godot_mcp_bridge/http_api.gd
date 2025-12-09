@@ -131,6 +131,10 @@ func _handle_request(conn: StreamPeerTCP):
 	else:
 		_send_response(conn, 200, response)
 
+var debugger_plugin
+
+# ... existing code ...
+
 func _route_request(path: String, args: Dictionary):
 	if not scene_tools: return {"error": "Tools not initialized"}
 
@@ -155,9 +159,19 @@ func _route_request(path: String, args: Dictionary):
 		"/input/actions": return input_map_tools.list_actions()
 		"/game/play": return resource_tools.run_scene(editor_plugin, args)
 		"/game/stop": return resource_tools.stop_scene(editor_plugin)
-		#"/input/action": return input_map_tools.get_action(args) # Check if this exists
-		"/editor/output": 
-			return editor_tools.read_editor_logs(args)
+		"/editor/output": return editor_tools.read_editor_logs(args)
+		"/debugger/sessions":
+			if debugger_plugin: return debugger_plugin.get_sessions_info()
+			return {"error": "Debugger plugin not available"}
+		"/debugger/continue":
+			if debugger_plugin: return {"success": debugger_plugin.resume_session(args.get("session_id", 0))}
+			return {"error": "Debugger plugin not available"}
+		"/debugger/next":
+			if debugger_plugin: return {"success": debugger_plugin.step_over(args.get("session_id", 0))}
+			return {"error": "Debugger plugin not available"}
+		"/debugger/step":
+			if debugger_plugin: return {"success": debugger_plugin.step_into(args.get("session_id", 0))}
+			return {"error": "Debugger plugin not available"}
 		_: return null
 
 func _send_response(conn, code, data):

@@ -17,82 +17,46 @@ export class LSPClient extends EventEmitter {
     this.sequence = 1;
     this.connected = false;
     this.initialized = false;
+    this.diagnosticsMap = new Map();
   }
 
   /**
    * Connect to the Godot LSP port
    */
   async connect() {
+    // ... existing connect ... 
     return new Promise((resolve, reject) => {
       this.socket = net.createConnection(this.port, this.host, () => {
         this.connected = true;
         console.error(`Connected to Godot LSP port at ${this.host}:${this.port}`);
-        
+
         // Send initialize request
         this.sendRequest('initialize', {
+          // ... options ... (keeping simplified here for replace block, usually I'd target constructor)
           processId: process.pid,
-          clientInfo: {
-            name: 'godot-mcp-server',
-            version: '1.0.0'
-          },
+          clientInfo: { name: 'godot-mcp-server', version: '1.0.0' },
           rootUri: null,
           capabilities: {
             textDocument: {
-              hover: {
-                contentFormat: ['markdown', 'plaintext']
-              },
-              completion: {
-                completionItem: {
-                  snippetSupport: true,
-                  documentationFormat: ['markdown', 'plaintext']
-                }
-              },
-              definition: {
-                linkSupport: true
-              },
-              documentSymbol: {
-                hierarchicalDocumentSymbolSupport: true
-              }
-            },
-            workspace: {
-              symbol: {
-                symbolKind: {
-                  valueSet: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
-                }
-              }
-            }
+              hover: { contentFormat: ['markdown', 'plaintext'] },
+              completion: { completionItem: { snippetSupport: true, documentationFormat: ['markdown', 'plaintext'] } },
+              definition: { linkSupport: true },
+              documentSymbol: { hierarchicalDocumentSymbolSupport: true },
+              publishDiagnostics: { relatedInformation: true } // Claim support
+            }, workspace: { symbol: { symbolKind: { valueSet: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26] } } }
           }
         }).then((result) => {
           this.initialized = true;
-          // Send initialized notification
           this.sendNotification('initialized', {});
           console.error('LSP initialized successfully');
           resolve(result);
         }).catch(reject);
       });
-
-      this.socket.on('data', (data) => {
-        this.handleData(data);
-      });
-
-      this.socket.on('error', (error) => {
-        console.error('LSP socket error:', error.message);
-        this.connected = false;
-        reject(error);
-      });
-
-      this.socket.on('close', () => {
-        console.error('LSP connection closed');
-        this.connected = false;
-        this.initialized = false;
-      });
-
-      // Set a timeout for connection
-      setTimeout(() => {
-        if (!this.connected) {
-          reject(new Error('LSP connection timeout'));
-        }
-      }, 5000);
+      // ... socket listeners ...
+      this.socket.on('data', (data) => this.handleData(data));
+      this.socket.on('error', (error) => { console.error('LSP socket error:', error.message); this.connected = false; reject(error); });
+      this.socket.on('close', () => { console.error('LSP connection closed'); this.connected = false; this.initialized = false; });
+      setTimeout(() => { if (!this.connected) reject(new Error('LSP connection timeout')); }, 5000);
     });
   }
 
@@ -101,21 +65,21 @@ export class LSPClient extends EventEmitter {
    */
   handleData(data) {
     this.buffer += data.toString();
-    
+
     // Process complete messages
     while (true) {
       const match = this.buffer.match(/^Content-Length: (\d+)\r?\n\r?\n/);
       if (!match) break;
-      
+
       const contentLength = parseInt(match[1]);
       const headerLength = match[0].length;
       const totalLength = headerLength + contentLength;
-      
+
       if (this.buffer.length < totalLength) break;
-      
+
       const messageContent = this.buffer.substring(headerLength, totalLength);
       this.buffer = this.buffer.substring(totalLength);
-      
+
       try {
         const message = JSON.parse(messageContent);
         this.handleMessage(message);
@@ -130,17 +94,18 @@ export class LSPClient extends EventEmitter {
    */
   handleMessage(message) {
     if (message.id && this.pendingRequests.has(message.id)) {
-      // Response to our request
       const handler = this.pendingRequests.get(message.id);
       this.pendingRequests.delete(message.id);
-      
-      if (message.error) {
-        handler.reject(new Error(message.error.message || 'LSP request failed'));
-      } else {
-        handler.resolve(message.result);
-      }
+      if (message.error) handler.reject(new Error(message.error.message || 'LSP request failed'));
+      else handler.resolve(message.result);
     } else if (message.method) {
-      // Notification or request from server
+      // Notification
+      if (message.method === 'textDocument/publishDiagnostics') {
+        const params = message.params;
+        if (params && params.uri) {
+          this.diagnosticsMap.set(params.uri, params.diagnostics);
+        }
+      }
       this.emit('notification', message);
     }
   }
@@ -163,10 +128,10 @@ export class LSPClient extends EventEmitter {
 
     const message = JSON.stringify(request);
     const header = `Content-Length: ${Buffer.byteLength(message)}\r\n\r\n`;
-    
+
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
-      
+
       this.socket.write(header + message, (error) => {
         if (error) {
           this.pendingRequests.delete(id);
@@ -200,7 +165,7 @@ export class LSPClient extends EventEmitter {
 
     const message = JSON.stringify(notification);
     const header = `Content-Length: ${Buffer.byteLength(message)}\r\n\r\n`;
-    
+
     this.socket.write(header + message);
   }
 
@@ -220,12 +185,19 @@ export class LSPClient extends EventEmitter {
 
   /**
    * Get diagnostics for a document
-   * Note: LSP sends diagnostics as notifications, so we need to listen for them
+   * Note: LSP sends diagnostics as notifications, so we return cached values
    */
   async getDocumentDiagnostics(uri) {
-    // In LSP, diagnostics are sent as notifications after didOpen or didChange
-    // We'll need to track them separately
-    throw new Error('Use diagnostic notifications from the server instead');
+    if (uri) {
+      return this.diagnosticsMap.get(uri) || [];
+    } else {
+      // Return all diagnostics if no URI provided?
+      const all = {};
+      for (const [docUri, diags] of this.diagnosticsMap.entries()) {
+        all[docUri] = diags;
+      }
+      return all;
+    }
   }
 
   /**
@@ -301,16 +273,17 @@ export class LSPClient extends EventEmitter {
    */
   disconnect() {
     if (this.socket) {
+      const socket = this.socket;
       if (this.initialized) {
         // Send shutdown request
         this.sendRequest('shutdown', {}).then(() => {
           this.sendNotification('exit', {});
-          this.socket.destroy();
+          socket.destroy();
         }).catch(() => {
-          this.socket.destroy();
+          socket.destroy();
         });
       } else {
-        this.socket.destroy();
+        socket.destroy();
       }
       this.socket = null;
       this.connected = false;

@@ -293,28 +293,6 @@ const gameBridgeTools = [
         }
     },
     {
-        name: 'godot_game_send_input',
-        description: 'Send an input event to the running game',
-        inputSchema: {
-            type: 'object',
-            properties: {
-                event_type: {
-                    type: 'string',
-                    enum: ['action', 'key', 'mouse_button', 'mouse_motion', 'joypad_button', 'joypad_motion'],
-                    description: 'Type of input event to send'
-                },
-                // Event specific properties
-                action_name: { type: 'string' },
-                pressed: { type: 'boolean' },
-                keycode: { type: 'integer' },
-                button_index: { type: 'integer' },
-                position_x: { type: 'number' },
-                position_y: { type: 'number' }
-            },
-            required: ['event_type']
-        }
-    },
-    {
         name: 'godot_game_send_sequence',
         description: 'Send a sequence of input events to running game',
         inputSchema: {

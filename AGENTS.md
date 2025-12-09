@@ -7,7 +7,7 @@ This server acts as a unified bridge between AI agents and the Godot Engine. It 
 *   **Instance Management**: Launch and control multiple Godot Editor instances with isolated port configurations (`godot_launch`, `godot_terminate`).
 *   **Editor Control**: Access scene tree, nodes, scripts, resources, and output logs in the editor via an injected HTTP bridge (`godot_scene_*`, `godot_node_*`, `godot_editor_*`).
 *   **Game Interaction**: Interact with the running game (screenshots, input simulation, runtime scene tree) via an injected autoload (`godot_game_*`).
-*   **Debugging (DAP)**: Set breakpoints, inspect variables, control execution, and view stack traces (`godot_dap_*`).
+*   **Debugging (DAP/Bridge)**: Set breakpoints, control execution (pause/resume/step), and monitor debug sessions (`godot_dap_*`, `godot_debugger_*`).
 *   **Code Intelligence (LSP)**: Autocomplete, go-to-definition, diagnostics, and symbol search (`godot_lsp_*`).
 
 ## Architecture

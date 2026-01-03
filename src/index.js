@@ -10,6 +10,7 @@ import { LSPClient } from './lsp-client.js';
 import { EditorApiClient } from './editor-api-client.js';
 import { GameBridgeClient } from './game-bridge-client.js';
 import { getToolDefinitions } from './unified-tools.js';
+import { bootstrapProject } from './project-bootstrap.js';
 
 // Global state
 const instanceManager = new InstanceManager();
@@ -35,11 +36,17 @@ function getClients(instanceId = null) {
     throw new Error(`Instance not found: ${id}`);
   }
 
+  const editor = new EditorApiClient('127.0.0.1', instance.ports.editorApi);
+  const game = new GameBridgeClient('127.0.0.1', instance.ports.gameBridge);
+
+  // Wire up editor client to game bridge for debugger state checking on timeout
+  game.setEditorClient(editor);
+
   return {
     dap: getDAPClient(instance),
     lsp: getLSPClient(instance),
-    editor: new EditorApiClient('127.0.0.1', instance.ports.editorApi),
-    game: new GameBridgeClient('127.0.0.1', instance.ports.gameBridge),
+    editor,
+    game,
     instance
   };
 }
@@ -78,6 +85,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
+    // === Project Bootstrap ===
+    if (name === 'godot_bootstrap_project') {
+      const result = await bootstrapProject(args.project_path, {
+        projectName: args.project_name,
+        godotVersion: args.godot_version,
+        includeGUT: args.include_gut,
+        gutVersion: args.gut_version
+      });
+      return success(result.message, result);
+    }
+
     // === Instance Management ===
     if (name === 'godot_launch') {
       const instance = await instanceManager.launchInstance(
@@ -169,7 +187,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         case 'godot_script_attach': result = await editor.attachScript(args.node_path, args.script_path); break;
         // godot_script_source removed (agents can read files directly)
         case 'godot_resources_list': result = await editor.listResources(args.directory, args.filter); break;
-        case 'godot_project_settings_list': result = await editor.listProjectSettings(args.prefix);
+        case 'godot_project_settings_list': result = await editor.listProjectSettings(args.prefix); break;
+        case 'godot_project_setting_get': result = await editor.getProjectSetting(args.setting_name); break;
+        case 'godot_project_setting_set': result = await editor.setProjectSetting(args.setting_name, args.value); break;
         // DAP Debugging
         case 'godot_dap_attach':
           result = await editor.dapAttach(args.instance_id);

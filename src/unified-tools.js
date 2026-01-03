@@ -68,6 +68,21 @@ const instanceTools = [
             },
             required: ['project_path']
         }
+    },
+    {
+        name: 'godot_bootstrap_project',
+        description: 'Bootstrap a new Godot project with GUT (Godot Unit Testing) support. Auto-detects Godot version from PATH. Creates project structure, project.godot, and installs GUT testing framework.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                project_path: { type: 'string', description: 'Absolute path where the project should be created' },
+                project_name: { type: 'string', description: 'Name of the project (defaults to directory name)' },
+                godot_version: { type: 'string', description: 'Godot version (auto-detected from godot binary in PATH if not specified)' },
+                include_gut: { type: 'boolean', default: true, description: 'Include GUT (Godot Unit Testing) framework (default: true)' },
+                gut_version: { type: 'string', default: '9.5.1', description: 'GUT version to install (for Godot 4.x use 9.x)' }
+            },
+            required: ['project_path']
+        }
     }
 ];
 
@@ -244,10 +259,11 @@ const editorTools = [
     },
     {
         name: 'godot_game_play',
-        description: 'Start playing the current scene (or main scene) in the Godot editor',
+        description: 'Start playing a scene in the Godot editor (defaults to main scene)',
         inputSchema: {
             type: 'object',
             properties: {
+                scene_mode: { type: 'string', default: 'main', description: 'Which scene to play: "main" (project main scene) or "current" (currently open scene)' },
                 enable_runtime_api: { type: 'boolean', default: true, description: 'Inject Game Bridge autoload to enable runtime interaction' }
             }
         }

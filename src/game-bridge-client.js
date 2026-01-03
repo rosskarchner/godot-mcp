@@ -8,6 +8,39 @@ export class GameBridgeClient {
     constructor(host = '127.0.0.1', port = 8766) {
         this.baseUrl = `http://${host}:${port}`;
         this.timeout = 10000;
+        this.editorClient = null;
+    }
+
+    /**
+     * Set the editor client reference for debugger state checking
+     * @param {EditorApiClient} client 
+     */
+    setEditorClient(client) {
+        this.editorClient = client;
+    }
+
+    /**
+     * Check if any debugger session is paused
+     * @returns {Promise<{paused: boolean, sessions: Array}>}
+     */
+    async checkDebuggerPaused() {
+        if (!this.editorClient) {
+            return { paused: false, sessions: [] };
+        }
+
+        try {
+            const sessions = await this.editorClient.getDebuggerSessions();
+            const pausedSessions = Array.isArray(sessions)
+                ? sessions.filter(s => s.paused)
+                : [];
+            return {
+                paused: pausedSessions.length > 0,
+                sessions: pausedSessions
+            };
+        } catch {
+            // Editor might not be responding either
+            return { paused: false, sessions: [] };
+        }
     }
 
     async request(method, endpoint, data = null) {
@@ -30,7 +63,55 @@ export class GameBridgeClient {
 
             return await response.json();
         } catch (error) {
-            if (error.name === 'AbortError') {
+            // Handle timeout - AbortError in older Node.js, TimeoutError in newer versions
+            if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+                // Timeout occurred - check if game is paused in debugger
+                const debuggerState = await this.checkDebuggerPaused();
+
+                if (debuggerState.paused) {
+                    const session = debuggerState.sessions[0]; // Primary session
+
+                    let errorDetails = [];
+
+                    // Session basic info
+                    errorDetails.push(`Session ${session.id}: paused=${session.paused}, can_debug=${session.can_debug}`);
+
+                    // Break reason and location
+                    if (session.reason) {
+                        errorDetails.push(`Reason: ${session.reason}`);
+                    }
+                    if (session.break_file) {
+                        const location = session.break_line >= 0
+                            ? `${session.break_file}:${session.break_line}`
+                            : session.break_file;
+                        errorDetails.push(`Location: ${location}`);
+                    }
+
+                    // Actual error message
+                    if (session.error) {
+                        errorDetails.push(`Error: ${session.error}`);
+                    }
+
+                    // Stack trace (if available)
+                    let stackInfo = '';
+                    if (session.stack && session.stack.length > 0) {
+                        const stackLines = session.stack.map((frame, i) => {
+                            const loc = frame.line >= 0 ? `${frame.file}:${frame.line}` : frame.file;
+                            return `  ${i}: ${frame.function || '<anonymous>'} at ${loc}`;
+                        }).join('\n');
+                        stackInfo = `\n\nStack trace:\n${stackLines}`;
+                    }
+
+                    throw new Error(
+                        `Game Bridge timeout - the game appears to be stopped in the debugger.\n\n` +
+                        `${errorDetails.join('\n')}${stackInfo}\n\n` +
+                        `To inspect or continue:\n` +
+                        `1. Use godot_debugger_sessions to see full debugger state\n` +
+                        `2. Use godot_debugger_resume to continue execution\n` +
+                        `3. Or use godot_debugger_step_over to step through the code`
+                    );
+                }
+
                 throw new Error(`Request timeout to Game Bridge at ${this.baseUrl}`);
             }
             throw error;

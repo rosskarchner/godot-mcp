@@ -27,11 +27,11 @@ func list_resources(args: Dictionary) -> Dictionary:
 func run_scene(editor_plugin: EditorPlugin, args: Dictionary = {}) -> Dictionary:
 	# Handle autoload injection if requested
 	var enable_runtime_api: bool = args.get("enable_runtime_api", false)
-	
+
 	# Support old parameter name for backwards compatibility
 	if not enable_runtime_api and args.has("enable_screenshot_api"):
 		enable_runtime_api = args.get("enable_screenshot_api", false)
-	
+
 	var autoload_enabled := false
 
 	if enable_runtime_api:
@@ -50,8 +50,15 @@ func run_scene(editor_plugin: EditorPlugin, args: Dictionary = {}) -> Dictionary
 
 			autoload_enabled = true
 
-	# Play the current scene
-	editor_interface.play_current_scene()
+	# Play the scene - defaults to main scene
+	var scene_mode: String = args.get("scene_mode", "main")
+	match scene_mode:
+		"main":
+			editor_interface.play_main_scene()
+		"current":
+			editor_interface.play_current_scene()
+		_:
+			return {"error": "Invalid scene_mode. Use 'main' or 'current'."}
 
 	var result := {
 		"success": true,

@@ -106,7 +106,7 @@ func _handle_request() -> void:
 	elif method == "GET" and path.begins_with("/scene_tree"):
 		_handle_scene_tree_request(path)
 	elif method == "POST" and path.begins_with("/input-sequence"):
-		_handle_input_sequence_request(body)
+		await _handle_input_sequence_request(body)
 	elif method == "POST" and path.begins_with("/input"):
 		_handle_input_request(body)
 	else:

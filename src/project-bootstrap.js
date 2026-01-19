@@ -51,16 +51,21 @@ export async function bootstrapProject(projectPath, options = {}) {
         gutVersion = "9.5.1"
     } = options;
 
-    // Check if directory exists
-    try {
-        await fs.access(projectPath);
-        throw new Error(`Directory already exists: ${projectPath}`);
-    } catch (err) {
-        if (err.code !== 'ENOENT') throw err;
-    }
-
-    // Create project directory
+    // Create project directory (or use existing if empty)
     await fs.mkdir(projectPath, { recursive: true });
+    
+    // Check if directory is empty (allow bootstrapping in existing empty directories)
+    const entries = await fs.readdir(projectPath);
+    const hasProjectGodot = entries.includes('project.godot');
+    
+    if (hasProjectGodot) {
+        throw new Error(`Godot project already exists at: ${projectPath}`);
+    }
+    
+    // Warn if directory is not empty (but allow it - user might have files they want to keep)
+    if (entries.length > 0) {
+        console.warn(`Warning: Directory is not empty. Bootstrapping in existing directory: ${projectPath}`);
+    }
 
     const createdFiles = [];
 

@@ -4,11 +4,14 @@
 export.cfg
 export_presets.cfg
 
-# Node
-node_modules/
-npm-debug.log
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+dist/
 
 # MCP Server
 .instances.json
 mcp_screenshots/
+screenshot_*.png
 *.log

@@ -156,26 +156,28 @@ func get_sessions_info():
 		valid_sessions.append(info)
 	return valid_sessions
 
+# Flow-control messages are unprefixed: the game-side RemoteDebugger handles
+# "continue"/"next"/"step" directly while paused in its debug loop.
 func resume_session(session_id):
+	session_id = int(session_id)
 	if active_sessions.has(session_id):
 		var session = get_session(session_id)
-		# "continue" is the standard command for resuming
-		session.send_message("scene:continue", [])
+		session.send_message("continue", [])
 		return true
 	return false
 
 func step_over(session_id):
+	session_id = int(session_id)
 	if active_sessions.has(session_id):
 		var session = get_session(session_id)
-		# "next" is step over
-		session.send_message("scene:next", [])
+		session.send_message("next", [])
 		return true
 	return false
 
 func step_into(session_id):
+	session_id = int(session_id)
 	if active_sessions.has(session_id):
 		var session = get_session(session_id)
-		# "step" is step into
-		session.send_message("scene:step", [])
+		session.send_message("step", [])
 		return true
 	return false

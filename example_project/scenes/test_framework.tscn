@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://c8yh17xpaq4yh"]
+[gd_scene load_steps=3 format=3 uid="uid://c8yh17xpaq4yh"]
 
 [ext_resource type="Script" id="0" uid="uid://dqxakmoxqtxpxc" path="res://scripts/test_node.gd"]
+[ext_resource type="Script" id="1" path="res://scripts/test_button.gd"]
 
 [node name="TestRoot" type="Node2D"]
 position = Vector2(512, 384)
@@ -69,6 +70,7 @@ offset_top = 120.0
 offset_right = 150.0
 offset_bottom = 160.0
 text = "Click Me"
+script = ExtResource("1")
 
 [node name="Panel" type="Panel" parent="UI"]
 offset_left = 400.0

@@ -12,18 +12,32 @@ This server acts as a unified bridge between AI agents and the Godot Engine. It 
 
 ## Architecture
 
-The server runs on Node.js and orchestrates communication:
+The server runs on Python (official MCP Python SDK / FastMCP) and orchestrates communication:
 
-1.  **Node.js Server**: Handles MCP requests, manages Godot processes, and routes commands to the appropriate client.
+1.  **Python Server** (`src/godot_mcp/`): Handles MCP requests, manages Godot processes, and routes commands to the appropriate client.
 2.  **Godot Addon (`godot_mcp_bridge`)**: Automatically injected into targeted projects to provide a REST API for editor tools.
 3.  **Godot Autoload (`game_bridge.gd`)**: Automatically injected to provide a REST API for running games.
 4.  **LSP/DAP Clients**: Connect to standard Godot ports (configured per-instance).
 
 ## Usage
 
-1.  **Start the Server**: `npm start`
-2.  **Launch Godot**: Use `godot_launch` with the path to your project.
-3.  **Use Tools**: Call any `godot_*` tool. The server handles the routing.
+1.  **Install**: `uv venv && uv pip install -e .`
+2.  **Start the Server**: `uv run godot-mcp-server` (stdio)
+3.  **Launch Godot**: Use `godot_launch` with the path to your project.
+4.  **Use Tools**: Call any `godot_*` tool. The server handles the routing.
+
+## Tests
+
+Integration tests (require Godot in PATH and a display) live in `test/`:
+
+*   `test/test_bootstrap.py` — project bootstrap (no Godot instance needed)
+*   `test/test_editor_ops.py` — editor tool operations against a live editor
+*   `test/test_all_features.py` — full flow: launch, DAP breakpoints, game play, input, debugger, LSP
+*   `test/test_mouse_input.py` — synthetic mouse clicks reaching GUI controls (by node path, coordinates, and raw sequences)
+*   `test/test_prompts_resources.py` — MCP resources (including binary screenshot) and prompt rendering against a live game
+*   `test/test_debugger_inspection.py` — runtime error pauses the game; agent inspects stack/variables/evaluate, steps, and resumes with no debugger setup
+
+Run with `.venv/bin/python test/<name>.py`.
 
 ## Configuration
 

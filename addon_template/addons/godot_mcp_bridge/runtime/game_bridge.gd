@@ -109,6 +109,8 @@ func _handle_request() -> void:
 		await _handle_input_sequence_request(body)
 	elif method == "POST" and path.begins_with("/input"):
 		_handle_input_request(body)
+	elif method == "POST" and path.begins_with("/click"):
+		await _handle_click_request(body)
 	else:
 		_send_error_response(404, "Not Found")
 
@@ -210,6 +212,15 @@ func _build_node_tree(node: Node, current_depth: int, max_depth: int) -> Diction
 		result["position"] = [node.position.x, node.position.y]
 		result["rotation"] = node.rotation
 		result["scale"] = [node.scale.x, node.scale.y]
+		var canvas_pos: Vector2 = node.get_global_transform_with_canvas().origin
+		result["screen_position"] = [canvas_pos.x, canvas_pos.y]
+	elif node is Control:
+		# Viewport-space rect, usable directly as click coordinates
+		var xform: Transform2D = node.get_global_transform_with_canvas()
+		var scale: Vector2 = xform.get_scale()
+		result["screen_rect"] = [xform.origin.x, xform.origin.y,
+				node.size.x * scale.x, node.size.y * scale.y]
+		result["visible"] = node.is_visible_in_tree()
 	elif node is Node3D:
 		result["position"] = [node.position.x, node.position.y, node.position.z]
 		result["rotation"] = [node.rotation.x, node.rotation.y, node.rotation.z]
@@ -264,25 +275,82 @@ func _handle_input_request(body: String) -> void:
 
 	# Send the event to the running game
 	print("[MCP] Sending input event: ", event_type)
-
-	# Mouse button events currently require proper GUI routing setup
-	# For now, send them through the standard input system
-	if event is InputEventMouseButton:
-		var mouse_event = event as InputEventMouseButton
-		print("[MCP] Mouse button event at position: ", mouse_event.position)
-		print("[MCP] Note: UI element click detection requires further setup")
-
-	# Route through the input system
 	get_tree().root.push_input(event)
-
-	var response_msg = "Input event sent to game"
-	if event_type == "mouse_button":
-		response_msg = "Mouse button event sent. Note: UI element click detection is not yet fully supported. Use input actions or keyboard events for UI interaction."
 
 	_send_json_response({
 		"success": true,
 		"event_type": event_type,
-		"message": response_msg
+		"message": "Input event sent to game"
+	})
+
+
+func _handle_click_request(body: String) -> void:
+	var json := JSON.new()
+	if json.parse(body) != OK:
+		_send_error_response(400, "Invalid JSON: " + json.get_error_message())
+		return
+	var data = json.data
+	if not data is Dictionary:
+		_send_error_response(400, "Expected JSON object")
+		return
+
+	# Resolve target position: either an explicit x/y or a node's screen center
+	var pos := Vector2.ZERO
+	var resolved_node := ""
+	if data.has("node_path"):
+		var node := get_tree().root.get_node_or_null(NodePath(str(data.node_path)))
+		if node == null:
+			_send_error_response(404, "Node not found: " + str(data.node_path))
+			return
+		if node is Control:
+			pos = node.get_global_transform_with_canvas() * (node.size / 2.0)
+		elif node is Node2D:
+			pos = node.get_global_transform_with_canvas().origin
+		else:
+			_send_error_response(400, "Node is not a Control or Node2D: " + str(data.node_path))
+			return
+		resolved_node = str(node.get_path())
+		pos += Vector2(data.get("offset_x", 0.0), data.get("offset_y", 0.0))
+	elif data.has("x") and data.has("y"):
+		pos = Vector2(data.get("x", 0.0), data.get("y", 0.0))
+	else:
+		_send_error_response(400, "Provide node_path or x/y coordinates")
+		return
+
+	var button_index: int = data.get("button_index", MOUSE_BUTTON_LEFT)
+	var double_click: bool = data.get("double_click", false)
+	var root := get_tree().root
+
+	# Hover first so mouse_entered and hover states fire before the press
+	var motion := InputEventMouseMotion.new()
+	motion.position = pos
+	motion.global_position = pos
+	root.push_input(motion)
+	await get_tree().process_frame
+
+	var press := InputEventMouseButton.new()
+	press.button_index = button_index
+	press.pressed = true
+	press.position = pos
+	press.global_position = pos
+	press.double_click = double_click
+	press.button_mask = 1 << (button_index - 1)
+	root.push_input(press)
+	await get_tree().process_frame
+
+	var release := InputEventMouseButton.new()
+	release.button_index = button_index
+	release.pressed = false
+	release.position = pos
+	release.global_position = pos
+	root.push_input(release)
+	await get_tree().process_frame
+
+	_send_json_response({
+		"success": true,
+		"clicked_at": [pos.x, pos.y],
+		"node": resolved_node,
+		"button_index": button_index
 	})
 
 
@@ -433,6 +501,9 @@ func _create_mouse_button_event(data: Dictionary) -> InputEventMouseButton:
 	event.button_index = data.get("button_index", 1)
 	event.pressed = data.get("pressed", true)
 	event.position = Vector2(data.get("position_x", 0.0), data.get("position_y", 0.0))
+	event.global_position = event.position
+	if event.pressed:
+		event.button_mask = 1 << (event.button_index - 1)
 	event.double_click = data.get("double_click", false)
 	event.alt_pressed = data.get("alt_pressed", false)
 	event.shift_pressed = data.get("shift_pressed", false)
@@ -444,8 +515,11 @@ func _create_mouse_button_event(data: Dictionary) -> InputEventMouseButton:
 func _create_mouse_motion_event(data: Dictionary) -> InputEventMouseMotion:
 	var event := InputEventMouseMotion.new()
 	event.position = Vector2(data.get("position_x", 0.0), data.get("position_y", 0.0))
+	event.global_position = event.position
 	event.relative = Vector2(data.get("relative_x", 0.0), data.get("relative_y", 0.0))
 	event.velocity = Vector2(data.get("velocity_x", 0.0), data.get("velocity_y", 0.0))
+	# button_mask lets motion events act as drags (e.g. 1 = left button held)
+	event.button_mask = int(data.get("button_mask", 0))
 	event.alt_pressed = data.get("alt_pressed", false)
 	event.shift_pressed = data.get("shift_pressed", false)
 	event.ctrl_pressed = data.get("ctrl_pressed", false)

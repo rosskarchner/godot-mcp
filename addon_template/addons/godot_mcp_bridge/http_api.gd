@@ -156,10 +156,12 @@ func _route_request(path: String, args: Dictionary):
 		"/project/settings": return project_tools.list_project_settings(args)
 		"/project/get": return project_tools.get_project_setting(args)
 		"/project/set": return project_tools.set_project_setting(args)
-		"/input/actions": return input_map_tools.list_actions()
+		"/input/actions": return input_map_tools.list_input_actions(args)
 		"/game/play": return resource_tools.run_scene(editor_plugin, args)
 		"/game/stop": return resource_tools.stop_scene(editor_plugin)
 		"/editor/output": return editor_tools.read_editor_logs(args)
+		"/editor/dialogs": return editor_tools.list_dialogs(args)
+		"/editor/dialog/dismiss": return editor_tools.dismiss_dialog(args)
 		"/debugger/sessions":
 			if debugger_plugin: return debugger_plugin.get_sessions_info()
 			return {"error": "Debugger plugin not available"}

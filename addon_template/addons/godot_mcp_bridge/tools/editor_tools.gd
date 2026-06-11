@@ -113,6 +113,59 @@ func clear_output_log(_args: Dictionary) -> Dictionary:
 		"message": "Output log cleared"
 	}
 
+func list_dialogs(_args: Dictionary = {}) -> Dictionary:
+	"""List visible modal dialogs in the editor (alerts, confirmations)."""
+	var dialogs := []
+	var root := editor_interface.get_base_control().get_tree().root
+	_scan_dialogs(root, dialogs)
+	return {"success": true, "count": dialogs.size(), "dialogs": dialogs}
+
+func _scan_dialogs(node: Node, out: Array) -> void:
+	if node is AcceptDialog and node.visible:
+		var info := {
+			"type": node.get_class(),
+			"title": node.title,
+			"text": node.dialog_text,
+			"path": str(node.get_path()),
+			"buttons": [node.get_ok_button().text]
+		}
+		if node is ConfirmationDialog:
+			info["buttons"].append(node.get_cancel_button().text)
+		out.append(info)
+	for child in node.get_children():
+		_scan_dialogs(child, out)
+
+func dismiss_dialog(args: Dictionary = {}) -> Dictionary:
+	"""Dismiss a visible dialog. accept=true presses OK, otherwise cancels/closes.
+	Targets dialog_path if given, else the first visible dialog."""
+	var accept: bool = args.get("accept", false)
+	var dialog_path: String = args.get("dialog_path", "")
+
+	var dialogs := []
+	var root := editor_interface.get_base_control().get_tree().root
+	_scan_dialogs(root, dialogs)
+	if dialogs.is_empty():
+		return {"error": "No visible dialogs"}
+
+	var target_path: String = dialog_path if not dialog_path.is_empty() else dialogs[0]["path"]
+	var dialog := root.get_node_or_null(NodePath(target_path))
+	if dialog == null or not dialog is AcceptDialog:
+		return {"error": "Dialog not found: " + target_path}
+
+	if accept:
+		dialog.get_ok_button().pressed.emit()
+	elif dialog is ConfirmationDialog:
+		dialog.get_cancel_button().pressed.emit()
+	else:
+		dialog.hide()
+
+	return {
+		"success": true,
+		"dismissed": target_path,
+		"title": dialog.title,
+		"accepted": accept
+	}
+
 func add_output_message(message: String, type: String = "print") -> void:
 	var msg := {
 		"type": type,

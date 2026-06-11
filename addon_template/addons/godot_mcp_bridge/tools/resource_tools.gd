@@ -50,12 +50,21 @@ func run_scene(editor_plugin: EditorPlugin, args: Dictionary = {}) -> Dictionary
 
 			autoload_enabled = true
 
-	# Play the scene - defaults to main scene
+	# Play the scene - defaults to main scene.
+	# Pre-check so we fail with an API error instead of the editor popping a
+	# modal alert the caller can't see.
 	var scene_mode: String = args.get("scene_mode", "main")
 	match scene_mode:
 		"main":
+			var main_scene: String = ProjectSettings.get_setting("application/run/main_scene", "")
+			if main_scene.is_empty():
+				return {"error": "No main scene defined in project settings. Set application/run/main_scene or use scene_mode='current'."}
+			if not ResourceLoader.exists(main_scene):
+				return {"error": "Main scene '%s' does not exist. Fix application/run/main_scene or use scene_mode='current'." % main_scene}
 			editor_interface.play_main_scene()
 		"current":
+			if editor_interface.get_edited_scene_root() == null:
+				return {"error": "No scene is open in the editor (it may still be restoring tabs). Load one with godot_scene_load or retry shortly."}
 			editor_interface.play_current_scene()
 		_:
 			return {"error": "Invalid scene_mode. Use 'main' or 'current'."}
